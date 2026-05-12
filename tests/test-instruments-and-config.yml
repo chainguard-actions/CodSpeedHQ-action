@@ -1,0 +1,29 @@
+name: Test instruments, mongo-uri-env-name, config, and go-runner-version inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create config file
+        run: |
+          mkdir -p /tmp/codspeed-config
+          cat > /tmp/codspeed-config/codspeed.yml <<'EOF'
+          version: 1
+          EOF
+      - id: action
+        uses: .
+        with:
+          mode: "walltime"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
+          config: "/tmp/codspeed-config/codspeed.yml"
+          go-runner-version: "1.0.0"
+          runner-version: "latest"
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+      - name: Assert action completed
+        run: |
+          echo "Action completed successfully with instruments and config inputs"
+          echo "PASS"
