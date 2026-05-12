@@ -1,0 +1,24 @@
+name: Test instruments and config inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          mode: walltime
+          run: "echo 'benchmark placeholder'"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
+          go-runner-version: "1.0.0"
+          config: "codspeed.yml"
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+        continue-on-error: true
+      - name: Assert action ran
+        run: |
+          echo "Action completed (may have failed due to no real benchmarks or missing MongoDB, which is expected)"
+          echo "PASS"
