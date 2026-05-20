@@ -1,8 +1,0 @@
-{
-  "owner": "CodSpeedHQ",
-  "name": "action",
-  "alias": "codspeed-action",
-  "visibility": "internal",
-  "description": "Continuous benchmarking and performance checks",
-  "block_publish": false
-}
