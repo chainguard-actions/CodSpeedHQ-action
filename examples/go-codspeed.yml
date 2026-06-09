@@ -1,0 +1,32 @@
+name: CodSpeed
+
+on:
+  push:
+    branches:
+      - "main" # or "master"
+  pull_request: # required to have reports on PRs
+  # `workflow_dispatch` allows CodSpeed to trigger backtest
+  # performance analysis in order to generate initial data.
+  workflow_dispatch:
+
+permissions: # optional for public repositories
+  contents: read
+  id-token: write # for OpenID Connect authentication with CodSpeed
+
+jobs:
+  codspeed:
+    name: Run benchmarks
+    runs-on: codspeed-macro
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Run Go benchmarks
+        uses: CodSpeedHQ/action@main
+        with:
+          mode: walltime # go only supports walltime mode
+          run: go test -bench=. -benchtime=5s
