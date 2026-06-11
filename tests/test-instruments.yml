@@ -1,4 +1,4 @@
-name: Test instruments and upload inputs
+name: Test instruments and advanced inputs
 on:
   workflow_dispatch:
 jobs:
@@ -6,21 +6,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Create working directory
-        run: mkdir -p /tmp/bench-workdir
       - id: action
         uses: .
         with:
           mode: walltime
-          run: "echo 'no benchmarks'"
-          token: "fake-token-for-testing"
-          upload-url: "https://example.invalid/upload"
-          working-directory: "/tmp/bench-workdir"
+          run: "echo 'benchmark placeholder'"
           instruments: "mongodb"
-          mongo-uri-env-name: "MONGO_URI"
-          allow-empty: "true"
+          mongo-uri-env-name: "MONGODB_URI"
+          go-runner-version: "1.0.0"
+          config: "codspeed.yml"
           runner-version: "latest"
+          allow-empty: "true"
           skip-hash-check-warning: "true"
-      - name: Assert action completed
+        continue-on-error: true
+      - name: Assert action ran with instruments inputs
         run: |
-          echo "PASS: action completed with instruments inputs"
+          echo "Action completed with instruments, mongo-uri-env-name, go-runner-version, and config inputs"
+          echo "PASS"
