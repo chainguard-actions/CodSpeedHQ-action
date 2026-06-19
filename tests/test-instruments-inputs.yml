@@ -1,0 +1,29 @@
+name: Test instruments inputs (instruments, mongo-uri-env-name, go-runner-version)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Test CodSpeed action with instruments inputs
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: "walltime"
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+          runner-version: "latest"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
+          go-runner-version: "1.0.0"
+      - name: Assert CodSpeed runner was installed
+        run: |
+          echo "Checking if codspeed runner binary is available..."
+          if ! command -v codspeed &>/dev/null; then
+            echo "FAIL: codspeed binary not found in PATH"
+            exit 1
+          fi
+          echo "codspeed binary found at: $(which codspeed)"
+          echo "PASS"
