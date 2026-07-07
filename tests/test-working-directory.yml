@@ -1,0 +1,29 @@
+name: Test working directory input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create working directory
+        run: mkdir -p /tmp/bench-workdir
+      - id: action
+        uses: .
+        with:
+          mode: simulation
+          working-directory: /tmp/bench-workdir
+          allow-empty: "true"
+          skip-hash-check-warning: "false"
+        continue-on-error: true
+      - name: Assert codspeed runner was installed with custom working directory
+        run: |
+          echo "Checking that codspeed binary was installed (working-directory=/tmp/bench-workdir)..."
+          if ! command -v codspeed &>/dev/null; then
+            echo "FAIL: codspeed binary not found in PATH"
+            exit 1
+          fi
+          echo "PASS: codspeed binary is installed with custom working directory"
