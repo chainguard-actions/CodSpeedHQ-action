@@ -1,0 +1,26 @@
+name: Test config and go-runner-version inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a minimal codspeed config file
+        run: |
+          cat > /tmp/codspeed.yml << 'EOF'
+          version: 1
+          EOF
+      - id: action
+        uses: .
+        with:
+          mode: walltime
+          run: "echo 'benchmark placeholder'"
+          config: "/tmp/codspeed.yml"
+          go-runner-version: "1.0.0"
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+      - name: Assert action completed successfully
+        run: |
+          echo "Action completed with config and go-runner-version inputs"
+          echo "PASS"
