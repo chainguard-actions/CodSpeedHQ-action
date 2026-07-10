@@ -1,0 +1,34 @@
+name: Test instruments and mongo-uri-env-name inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      CODSPEED_SKIP_UPLOAD: "true"
+      MY_MONGO_URI: "mongodb://localhost:27017"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up mock binaries
+        run: |
+          MOCK_BIN="$GITHUB_WORKSPACE/tests/fixtures/mock-bin"
+          chmod +x "$MOCK_BIN/curl" "$MOCK_BIN/codspeed"
+          echo "$MOCK_BIN" >> "$GITHUB_PATH"
+
+      - name: Run CodSpeed action with MongoDB instrumentation
+        id: action
+        uses: .
+        with:
+          mode: simulation
+          run: echo "Benchmarking with MongoDB!"
+          allow-empty: "true"
+          runner-version: latest
+          skip-hash-check-warning: "true"
+          cache-instruments: "false"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MY_MONGO_URI"
+
+      - name: Assert action completed successfully
+        run: |
+          echo "PASS: CodSpeed action completed with instruments=mongodb and mongo-uri-env-name set"

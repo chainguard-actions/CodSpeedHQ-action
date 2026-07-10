@@ -1,0 +1,27 @@
+#!/bin/bash
+# Mock sha256sum: for CodSpeed installer temp files, return the mock hash
+# Set CODSPEED_MOCK_INSTALLER_HASH env var to override hash for /tmp files
+
+REAL_SHA256SUM=""
+for p in /usr/bin/sha256sum /bin/sha256sum; do
+  if [ -x "$p" ]; then
+    REAL_SHA256SUM="$p"
+    break
+  fi
+done
+
+FILE="$1"
+
+# If a mock hash is set and the file is a temp file, return the mock hash
+if [ -n "$CODSPEED_MOCK_INSTALLER_HASH" ] && [ -n "$FILE" ] && echo "$FILE" | grep -q "^/tmp/"; then
+  echo "$CODSPEED_MOCK_INSTALLER_HASH  $FILE"
+  exit 0
+fi
+
+if [ -n "$REAL_SHA256SUM" ]; then
+  exec "$REAL_SHA256SUM" "$@"
+else
+  # Fallback: compute hash manually
+  echo "sha256sum not available" >&2
+  exit 127
+fi

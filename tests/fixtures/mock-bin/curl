@@ -1,0 +1,99 @@
+#!/bin/bash
+# Mock curl: intercepts CodSpeed installer downloads, passes everything else to real curl
+
+# Find the real curl (not this script)
+REAL_CURL=""
+for p in /usr/bin/curl /bin/curl /usr/local/bin/curl; do
+  if [ -x "$p" ]; then
+    REAL_CURL="$p"
+    break
+  fi
+done
+
+MOCK_BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Parse arguments to find URL and output options
+URL=""
+OUTPUT_FILE=""
+WRITE_OUT_FORMAT=""
+CODSPEED_URL=false
+
+i=1
+while [ $i -le $# ]; do
+  arg="${!i}"
+  case "$arg" in
+    http://*|https://*)
+      URL="$arg"
+      if echo "$URL" | grep -q "codspeed\.io"; then
+        CODSPEED_URL=true
+      fi
+      ;;
+    -o)
+      i=$((i+1))
+      OUTPUT_FILE="${!i}"
+      ;;
+    -o*)
+      OUTPUT_FILE="${arg#-o}"
+      ;;
+    -w)
+      i=$((i+1))
+      WRITE_OUT_FORMAT="${!i}"
+      ;;
+    -w*)
+      WRITE_OUT_FORMAT="${arg#-w}"
+      ;;
+  esac
+  i=$((i+1))
+done
+
+if $CODSPEED_URL; then
+  # Generate a fake installer script that installs our mock codspeed binary
+  INSTALLER="#!/bin/bash
+# Mock CodSpeed installer
+set -e
+MOCK_SRC=\"${MOCK_BIN_DIR}/codspeed\"
+
+# Try to install to a system-wide location first
+if [ -w /usr/local/bin ]; then
+  cp \"\$MOCK_SRC\" /usr/local/bin/codspeed
+  chmod +x /usr/local/bin/codspeed
+  echo 'Mock CodSpeed runner installed to /usr/local/bin/codspeed'
+elif [ -w /usr/bin ]; then
+  cp \"\$MOCK_SRC\" /usr/bin/codspeed
+  chmod +x /usr/bin/codspeed
+  echo 'Mock CodSpeed runner installed to /usr/bin/codspeed'
+else
+  # Fall back to user local bin
+  INSTALL_DIR=\"\$HOME/.local/bin\"
+  mkdir -p \"\$INSTALL_DIR\"
+  cp \"\$MOCK_SRC\" \"\$INSTALL_DIR/codspeed\"
+  chmod +x \"\$INSTALL_DIR/codspeed\"
+  echo \"Mock CodSpeed runner installed to \$INSTALL_DIR/codspeed\"
+  # Add to GITHUB_PATH so subsequent steps can find it
+  if [ -n \"\$GITHUB_PATH\" ]; then
+    echo \"\$INSTALL_DIR\" >> \"\$GITHUB_PATH\"
+  fi
+fi
+"
+
+  if [ -n "$OUTPUT_FILE" ]; then
+    # Release version: write to file and output http code
+    printf '%s' "$INSTALLER" > "$OUTPUT_FILE"
+    if [ -n "$WRITE_OUT_FORMAT" ]; then
+      # Replace %{http_code} with 200
+      echo "${WRITE_OUT_FORMAT//%\{http_code\}/200}"
+    fi
+  else
+    # Latest version: output to stdout (piped to bash)
+    printf '%s' "$INSTALLER"
+  fi
+  exit 0
+fi
+
+# Pass through to real curl
+if [ -n "$REAL_CURL" ]; then
+  exec "$REAL_CURL" "$@"
+else
+  echo "curl: command not found" >&2
+  exit 127
+fi

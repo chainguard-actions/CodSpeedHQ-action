@@ -1,0 +1,37 @@
+name: Test go-runner-version and config inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      CODSPEED_SKIP_UPLOAD: "true"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up mock binaries
+        run: |
+          MOCK_BIN="$GITHUB_WORKSPACE/tests/fixtures/mock-bin"
+          chmod +x "$MOCK_BIN/curl" "$MOCK_BIN/codspeed"
+          echo "$MOCK_BIN" >> "$GITHUB_PATH"
+
+      - name: Create a minimal CodSpeed config file
+        run: |
+          echo "# CodSpeed config" > /tmp/codspeed.yml
+
+      - name: Run CodSpeed action with go-runner-version and config
+        id: action
+        uses: .
+        with:
+          mode: walltime
+          run: echo "Benchmarking with Go runner!"
+          allow-empty: "true"
+          runner-version: latest
+          skip-hash-check-warning: "true"
+          cache-instruments: "false"
+          go-runner-version: "1.0.0"
+          config: "/tmp/codspeed.yml"
+
+      - name: Assert action completed successfully
+        run: |
+          echo "PASS: CodSpeed action completed with go-runner-version and config inputs"
