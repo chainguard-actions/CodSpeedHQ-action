@@ -125,12 +125,14 @@ runs:
         fi
 
         safe_runner_version=$(printf '%s' "$RUNNER_VERSION" | tr -d '\n\r')
+        safe_version_type=$(printf '%s' "$VERSION_TYPE" | tr -d '\n\r')
         echo "runner-version=$safe_runner_version" >> $GITHUB_OUTPUT
-        echo "version-type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+        echo "version-type=$safe_version_type" >> $GITHUB_OUTPUT
 
         # Get kernel version for cache key
         KERNEL_VERSION=$(uname -r)
-        echo "kernel-version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
+        safe_kernel_version=$(printf '%s' "$KERNEL_VERSION" | tr -d '\n\r')
+        echo "kernel-version=$safe_kernel_version" >> $GITHUB_OUTPUT
 
         # Normalize mode for cache key (commas are not allowed in cache keys)
         MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr ',' '-' | tr -d '\n\r')
@@ -159,7 +161,7 @@ runs:
         RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
         VERSION_TYPE: ${{ steps.versions.outputs.version-type }}
         SKIP_HASH_CHECK_WARNING: ${{ inputs.skip-hash-check-warning }}
-        INSTALLER_HASH: ${{ steps.installer-hash.outputs.hash }}
+        EXPECTED_HASH: ${{ steps.installer-hash.outputs.hash }}
       run: |
         if [ "$VERSION_TYPE" = "latest" ]; then
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
@@ -167,7 +169,16 @@ runs:
           fi
           INSTALLER_TMP=$(mktemp)
           trap "rm -f $INSTALLER_TMP" EXIT
-          curl -fsSL https://codspeed.io/install.sh -o "$INSTALLER_TMP"
+          CURL_ERR=$(mktemp)
+          if ! HTTP_CODE=$(curl -sSL -o "$INSTALLER_TMP" -w "%{http_code}" "https://codspeed.io/install.sh" 2>"$CURL_ERR"); then
+            echo "::error title=Failed to install CodSpeed CLI::Installation failed.%0AReason: $(cat "$CURL_ERR")"
+            exit 1
+          fi
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            error_body=$(cat "$INSTALLER_TMP")
+            echo "::error title=Failed to install CodSpeed CLI::Installation failed.%0AReason: HTTP $HTTP_CODE - ${error_body:-no response body}"
+            exit 1
+          fi
           bash "$INSTALLER_TMP" --quiet
         elif [ "$VERSION_TYPE" = "prerelease" ]; then
           # Prereleases are not pinned, so install from the versioned installer without hash verification.
@@ -176,7 +187,16 @@ runs:
           fi
           INSTALLER_TMP=$(mktemp)
           trap "rm -f $INSTALLER_TMP" EXIT
-          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALLER_TMP"
+          CURL_ERR=$(mktemp)
+          if ! HTTP_CODE=$(curl -sSL -o "$INSTALLER_TMP" -w "%{http_code}" "https://codspeed.io/v$RUNNER_VERSION/install.sh" 2>"$CURL_ERR"); then
+            echo "::error title=Failed to install CodSpeed CLI::Installation of CodSpeed CLI with version $RUNNER_VERSION failed.%0AReason: $(cat "$CURL_ERR")"
+            exit 1
+          fi
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            error_body=$(cat "$INSTALLER_TMP")
+            echo "::error title=Failed to install CodSpeed CLI::Installation of CodSpeed CLI with version $RUNNER_VERSION failed.%0AReason: HTTP $HTTP_CODE - ${error_body:-no response body}"
+            exit 1
+          fi
           bash "$INSTALLER_TMP" --quiet
         elif [ "$VERSION_TYPE" = "branch" ]; then
           # Install from specific branch using cargo
@@ -209,7 +229,6 @@ runs:
             exit 1
           fi
 
-          EXPECTED_HASH="$INSTALLER_HASH"
           if [ -z "$EXPECTED_HASH" ]; then
             echo "::error::No pinned hash found for installer version $RUNNER_VERSION. Update .codspeed-runner-installer-hashes.json."
             exit 1

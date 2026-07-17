@@ -91,11 +91,13 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Check action with version format ${{ matrix.version }}
         uses: ./
+        env:
+          MATRIX_VERSION: ${{ matrix.version }}
         with:
           allow-empty: true
           runner-version: ${{ matrix.version }}
           mode: simulation
-          run: echo "Testing version format ${{ matrix.version }}!"
+          run: echo "Testing version format $MATRIX_VERSION!"
 
   test-go-runner-version-formats:
     strategy:
@@ -112,11 +114,13 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Check action with version format ${{ matrix.version }}
         uses: ./
+        env:
+          MATRIX_VERSION: ${{ matrix.version }}
         with:
           allow-empty: true
           go-runner-version: ${{ matrix.version }}
           mode: walltime
-          run: echo "Testing version format ${{ matrix.version }}!"
+          run: echo "Testing version format $MATRIX_VERSION!"
 
   get-recent-pinned-runner-versions:
     runs-on: ubuntu-slim
@@ -140,11 +144,13 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: Check action with pinned runner version ${{ matrix.version }}
         uses: ./
+        env:
+          MATRIX_VERSION: ${{ matrix.version }}
         with:
           allow-empty: true
           runner-version: ${{ matrix.version }}
           mode: walltime # simulation not yet supported for all versions (was instrumentation before)
-          run: echo "Testing pinned version ${{ matrix.version }}!"
+          run: echo "Testing pinned version $MATRIX_VERSION!"
 
   check-installer-hashes:
     runs-on: ubuntu-latest

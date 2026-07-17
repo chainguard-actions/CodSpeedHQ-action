@@ -1,4 +1,4 @@
-name: Test walltime mode with allow-empty
+name: Test go-runner-version input
 on:
   workflow_dispatch:
 jobs:
@@ -9,10 +9,12 @@ jobs:
 
       - name: Set up fake codspeed binary and mock curl
         run: |
-          # Create a fake codspeed binary that exits 0
+          # Create a fake codspeed binary that records its arguments
           sudo tee /usr/local/bin/codspeed > /dev/null << 'EOF'
           #!/bin/sh
           echo "fake codspeed called with: $*"
+          # Write args to a file for assertion
+          echo "$*" > /tmp/codspeed-args.txt
           exit 0
           EOF
           sudo chmod +x /usr/local/bin/codspeed
@@ -53,13 +55,19 @@ jobs:
       - id: action
         uses: .
         with:
-          mode: walltime
+          mode: simulation
           run: "echo 'no benchmarks here'"
           allow-empty: "true"
           runner-version: "latest"
           skip-hash-check-warning: "true"
+          go-runner-version: "1.0.0"
 
-      - name: Assert action completed successfully
+      - name: Assert go-runner-version was passed to codspeed
         run: |
-          echo "Action completed successfully with walltime mode and allow-empty=true"
-          echo "PASS"
+          ARGS=$(cat /tmp/codspeed-args.txt)
+          echo "codspeed args: $ARGS"
+          if ! echo "$ARGS" | grep -q -- "--go-runner-version"; then
+            echo "FAIL: expected --go-runner-version in codspeed args"
+            exit 1
+          fi
+          echo "PASS: go-runner-version was passed to codspeed"

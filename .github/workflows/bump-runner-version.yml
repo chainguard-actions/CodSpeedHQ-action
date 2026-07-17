@@ -48,12 +48,12 @@ jobs:
           git config --global user.name "github-actions[bot]"
           echo "Bumping runner version to $VERSION"
           BRANCH_NAME=bump-runner-version/$VERSION
-          git checkout -b $BRANCH_NAME
+          git checkout -b "$BRANCH_NAME"
 
-          echo $VERSION > .codspeed-runner-version
+          echo "$VERSION" > .codspeed-runner-version
           jq --arg v "$VERSION" --arg h "$INSTALLER_HASH" '. + {($v): $h}' .codspeed-runner-installer-hashes.json > .codspeed-runner-installer-hashes.json.tmp && mv .codspeed-runner-installer-hashes.json.tmp .codspeed-runner-installer-hashes.json
 
           git add .codspeed-runner-version .codspeed-runner-installer-hashes.json
           git commit -m "chore: bump runner version to $VERSION"
-          git push origin $BRANCH_NAME
-          gh pr create --title "chore: bump runner version to $VERSION" --body "Bump runner version to $VERSION" --base main --head $BRANCH_NAME
+          git push origin "$BRANCH_NAME"
+          gh pr create --title "chore: bump runner version to $VERSION" --body "Bump runner version to $VERSION" --base main --head "$BRANCH_NAME"

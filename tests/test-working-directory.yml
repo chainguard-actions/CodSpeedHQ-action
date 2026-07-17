@@ -1,4 +1,4 @@
-name: Test walltime mode with allow-empty
+name: Test working-directory input
 on:
   workflow_dispatch:
 jobs:
@@ -50,16 +50,22 @@ jobs:
           CURLEOF
           sudo chmod +x /usr/local/bin/curl
 
+          # Create the working directory
+          mkdir -p /tmp/bench-workdir
+          echo "echo 'benchmark placeholder'" > /tmp/bench-workdir/run_bench.sh
+          chmod +x /tmp/bench-workdir/run_bench.sh
+
       - id: action
         uses: .
         with:
           mode: walltime
+          working-directory: "/tmp/bench-workdir"
           run: "echo 'no benchmarks here'"
           allow-empty: "true"
           runner-version: "latest"
           skip-hash-check-warning: "true"
 
-      - name: Assert action completed successfully
+      - name: Assert action completed successfully with working-directory
         run: |
-          echo "Action completed successfully with walltime mode and allow-empty=true"
+          echo "Action completed successfully with working-directory set and allow-empty=true"
           echo "PASS"
