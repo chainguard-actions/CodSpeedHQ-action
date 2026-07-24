@@ -1,0 +1,167 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-action:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - ubuntu-latest
+          - codspeedhq-arm64-ubuntu-22.04
+          - codspeedhq-arm64-ubuntu-24.04
+        mode:
+          - simulation
+          - instrumentation
+          - walltime
+          - simulation,memory
+
+    runs-on: ${{ matrix.os }}
+    env:
+      CODSPEED_SKIP_UPLOAD: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check basic action execution
+        uses: ./
+        with:
+          allow-empty: true
+          mode: ${{ matrix.mode }}
+          run: echo "Working!"
+      - name: Check action execution with env variables
+        uses: ./
+        env:
+          MY_ENV_VAR: "Hello"
+        with:
+          allow-empty: true
+          mode: ${{ matrix.mode }}
+          run: |
+            output=$(echo "$MY_ENV_VAR")
+            if [ "$output" != "Hello" ]; then
+              echo "Assertion failed: Expected 'Hello' but got '$output'"
+              exit 1
+            else
+              echo "Environment variable check passed with $output."
+            fi
+      - name: Check action in a custom directory
+        uses: ./
+        with:
+          allow-empty: true
+          mode: ${{ matrix.mode }}
+          working-directory: examples
+          # Check that the directory is actually changed
+          run: if [ $(basename $(pwd)) != "examples" ]; then exit 1; fi
+      - name: Check action with multiline command
+        uses: ./
+        with:
+          allow-empty: true
+          mode: ${{ matrix.mode }}
+          run: |
+            echo "Working";
+            echo "with";
+            echo "multiple lines";
+
+  test-runner-version-formats:
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - "latest"
+          - "4.4.1"
+          - "v4.4.1"
+
+    runs-on: ubuntu-latest
+    env:
+      CODSPEED_SKIP_UPLOAD: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check action with version format ${{ matrix.version }}
+        uses: ./
+        with:
+          allow-empty: true
+          runner-version: ${{ matrix.version }}
+          mode: simulation
+          run: echo "Testing version format!"
+
+  test-go-runner-version-formats:
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - "1.0.0"
+          - "1.0.0-beta.1"
+
+    runs-on: ubuntu-latest
+    env:
+      CODSPEED_SKIP_UPLOAD: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check action with version format ${{ matrix.version }}
+        uses: ./
+        with:
+          allow-empty: true
+          go-runner-version: ${{ matrix.version }}
+          mode: walltime
+          run: echo "Testing version format!"
+
+  get-recent-pinned-runner-versions:
+    runs-on: ubuntu-slim
+    outputs:
+      versions: ${{ steps.get-versions.outputs.versions }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - id: get-versions
+        run: echo "versions=$(jq -c 'keys_unsorted | .[-5:]' .codspeed-runner-installer-hashes.json)" >> "$GITHUB_OUTPUT"
+
+  test-recent-pinned-runner-versions:
+    needs: get-recent-pinned-runner-versions
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJson(needs.get-recent-pinned-runner-versions.outputs.versions) }}
+    runs-on: ubuntu-latest
+    env:
+      CODSPEED_SKIP_UPLOAD: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check action with pinned runner version ${{ matrix.version }}
+        uses: ./
+        with:
+          allow-empty: true
+          runner-version: ${{ matrix.version }}
+          mode: walltime # simulation not yet supported for all versions (was instrumentation before)
+          run: echo "Testing pinned version!"
+
+  check-installer-hashes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Verify pinned installer hashes
+        run: ./scripts/check-hashes.sh
+
+  test-config-file:
+    runs-on: ubuntu-latest
+    env:
+      CODSPEED_SKIP_UPLOAD: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: cat .github/test-codspeed.yml
+      - name: Check action with config file (no run input)
+        uses: ./
+        with:
+          mode: memory
+          config: .github/test-codspeed.yml

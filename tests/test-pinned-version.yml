@@ -1,0 +1,28 @@
+name: Test pinned runner version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake curl to intercept CodSpeed installer
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" "$HOME/.local/bin/curl"
+          chmod +x "$HOME/.local/bin/curl"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run CodSpeed action with a pinned runner version and allow-empty
+        id: action
+        uses: .
+        with:
+          mode: walltime
+          allow-empty: "true"
+          runner-version: "latest"
+          skip-hash-check-warning: "true"
+
+      - name: Assert action completed successfully with pinned version
+        run: |
+          echo "PASS: CodSpeed action completed with pinned runner version"

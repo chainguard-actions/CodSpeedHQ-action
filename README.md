@@ -1,22 +1,212 @@
-# CodSpeedHQ/action
+<div align="center">
+<h1>CodSpeed Action</h1>
 
-Continuous benchmarking and performance checks
+[![CI](https://github.com/CodSpeedHQ/action/actions/workflows/ci.yml/badge.svg)](https://github.com/CodSpeedHQ/action/actions/workflows/ci.yml)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/CodSpeedHQ/action)](https://github.com/CodSpeedHQ/action/releases)
+[![Discord](https://img.shields.io/badge/chat%20on-discord-7289da.svg)](https://discord.com/invite/MxpaCfKSqF)
 
-Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/CodSpeedHQ/action](https://github.com/CodSpeedHQ/action).
+GitHub Actions for running [CodSpeed](https://codspeed.io) in your CI.
 
-## Versions
+</div>
 
-| Version | Tag | Upstream commit |
-|---------|-----|-----------------|
-| v4.13.0 | [`v4.13.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.13.0) | — |
-| v4.13.1 | [`v4.13.1`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.13.1) | — |
-| v4.14.0 | [`v4.14.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.14.0) | — |
-| v4.15.0 | [`v4.15.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.15.0) | — |
-| v4.17.0 | [`v4.17.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.17.0) | [`9d332c4`](https://github.com/CodSpeedHQ/action/commit/9d332c4d90b43981c3e55ae8e38e68709996240f) |
-| v4.17.6 | [`v4.17.6`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.17.6) | [`63f3e98`](https://github.com/CodSpeedHQ/action/commit/63f3e98b61959fe67f146a3ff022e4136fe9bb9c) |
-| v4.18.2 | [`v4.18.2`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.18.2) | [`4e96933`](https://github.com/CodSpeedHQ/action/commit/4e969336ab9acd4f6f8d025fdd793292b0835df0) |
-| v4.18.4 | [`v4.18.4`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.18.4) | [`9f3a37e`](https://github.com/CodSpeedHQ/action/commit/9f3a37ece7abc84992501a7fcd54d1704f3458fa) |
-| v4.18.5 | [`v4.18.5`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.18.5) | [`f99becd`](https://github.com/CodSpeedHQ/action/commit/f99becdce5e5d51fd556489ebef684f4ecfd6286) |
+# Usage
+
+```yaml
+- uses: CodSpeedHQ/action@v4
+  with:
+    # [OPTIONAL]
+    # The command used to run your CodSpeed benchmarks
+    #
+    # Leave empty to use targets defined in your project configuration (e.g `codspeed.yml`)
+    # https://codspeed.io/docs/cli#configuration
+    # ⚠️ WARNING: for action/runner versions lower than v4.9.0, this parameter is required.
+    run: "<YOUR_COMMAND>"
+
+    # [REQUIRED]
+    # The measurement mode(s) to use. Possible values: "simulation" (recommended), "walltime".
+    # Accepts a single value or a comma-separated list (e.g., "simulation,walltime").
+    # More details on the instruments at https://docs.codspeed.io/instruments/
+    mode: "simulation"
+
+    # [OPTIONAL]
+    # CodSpeed recommends using OpenID Connect (OIDC) for authentication.
+    #
+    # If you are not using OpenID Connect, set the CodSpeed upload token
+    # that can be found at https://codspeed.io/<org>/<repo>/settings
+    # It's strongly recommended to use a secret for this value
+    # If you're instrumenting a public repository, you can omit this value altogether
+    #
+    # More information in the CodSpeed documentation:
+    # https://codspeed.io/docs/integrations/ci/github-actions#authentication
+    token: ""
+
+    # [OPTIONAL]
+    # The directory where the `run` command will be executed.
+    # ⚠️ WARNING: if you use `defaults.run.working-directory`, you must still set this parameter.
+    working-directory: ""
+
+    # [OPTIONAL]
+    # Path to a CodSpeed configuration file (codspeed.yml).
+    # If not specified, the runner will look for a codspeed.yml file in the repository root.
+    config: ""
+
+    # [OPTIONAL]
+    # Comma-separated list of instruments to enable. Possible values: mongodb.
+    instruments: ""
+
+    # [OPTIONAL]
+    # The name of the environment variable that contains the MongoDB URI to patch.
+    # If not provided, user will have to provide it dynamically through a CodSpeed integration.
+    # Only used if the `mongodb` instrument is enabled.
+    mongo_uri_env_name: ""
+
+    # [OPTIONAL]
+    # Enable caching of instrument installations (like valgrind or perf) to speed up
+    # subsequent workflow runs. Set to 'false' to disable caching. Defaults to 'true'.
+    cache-instruments: "true"
+
+    # [OPTIONAL]
+    # The directory to use for caching installations of instruments (like valgrind or perf).
+    # This will speed up subsequent workflow runs by reusing previously installed instruments.
+    # Defaults to $HOME/.cache/codspeed-action if not specified.
+    instruments-cache-dir: ""
+
+    # [OPTIONAL]
+    # A custom upload url, only if you are using an on premise CodSpeed instance
+    upload-url: ""
+
+    # [OPTIONAL]
+    # The version of the go-runner to use (e.g., 1.0.0, 1.0.0-beta.1). If not specified, the latest version will be installed
+    go-runner-version: ""
+```
+
+# Example usage
+
+## Python with `pytest` and [`pytest-codspeed`](https://github.com/CodSpeedHQ/pytest-codspeed)
+
+This workflow will run the benchmarks found in the `tests/` folder and upload the results to CodSpeed.
+
+It will be triggered on every push to the `main` branch and on every pull request.
+
+```yaml
+name: CodSpeed
+
+on:
+  push:
+    branches:
+      - "main" # or "master"
+  pull_request: # required to have reports on PRs
+  # `workflow_dispatch` allows CodSpeed to trigger backtest
+  # performance analysis in order to generate initial data.
+  workflow_dispatch:
+
+jobs:
+  benchmarks:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    permissions: # optional for public repositories
+      contents: read
+      id-token: write # for OpenID Connect authentication with CodSpeed
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v3
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@v4
+        with:
+          mode: simulation
+          run: pytest tests/ --codspeed
+```
+
+## Rust with `cargo-codspeed` and `codspeed-criterion-compat` / `codspeed-bencher-compat`
+
+This workflow will run the benchmarks found in the `tests/` folder and upload the results to CodSpeed.
+
+It will be triggered on every push to the `main` branch and on every pull request.
+
+```yml
+name: CodSpeed
+
+on:
+  push:
+    branches:
+      - "main" # or "master"
+  pull_request: # required to have reports on PRs
+  # `workflow_dispatch` allows CodSpeed to trigger backtest
+  # performance analysis in order to generate initial data.
+  workflow_dispatch:
+
+jobs:
+  name: Run benchmarks
+  benchmarks:
+    runs-on: ubuntu-latest
+    permissions: # optional for public repositories
+      contents: read
+      id-token: write # for OpenID Connect authentication with CodSpeed
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup rust toolchain, cache and cargo-codspeed binary
+        uses: moonrepo/setup-rust@v0
+        with:
+          channel: stable
+          cache-target: release
+          bins: cargo-codspeed
+
+      - name: Build the benchmark target(s)
+        run: cargo codspeed build
+
+      - name: Run the benchmarks
+        uses: CodSpeedHQ/action@v4
+        with:
+          mode: simulation
+          run: cargo codspeed run
+```
+
+## Node.js with `codspeed-node`, TypeScript and `vitest`
+
+This workflow will run the benchmarks defined with `vitest`'s `bench` function and upload the results to CodSpeed.
+
+It will be triggered on every push to the `main` branch and on every pull request.
+
+```yml
+name: CodSpeed
+
+on:
+  push:
+    branches:
+      - "main" # or "master"
+  pull_request: # required to have reports on PRs
+  # `workflow_dispatch` allows CodSpeed to trigger backtest
+  # performance analysis in order to generate initial data.
+  workflow_dispatch:
+
+jobs:
+  benchmarks:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    permissions: # optional for public repositories
+      contents: read
+      id-token: write # for OpenID Connect authentication with CodSpeed
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@v4
+        with:
+          mode: simulation
+          run: npx vitest bench
+```
 
 ## Privacy
 

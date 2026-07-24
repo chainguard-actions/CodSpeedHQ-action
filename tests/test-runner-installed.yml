@@ -1,0 +1,26 @@
+name: Test CodSpeed runner is installed
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run CodSpeed action to install runner
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: "walltime"
+          allow-empty: "true"
+          cache-instruments: "false"
+          skip-hash-check-warning: "true"
+      - name: Assert codspeed binary is installed
+        run: |
+          if ! command -v codspeed &>/dev/null; then
+            echo "FAIL: codspeed binary not found in PATH"
+            exit 1
+          fi
+          echo "codspeed binary found at: $(command -v codspeed)"
+          codspeed --version || true
+          echo "PASS"

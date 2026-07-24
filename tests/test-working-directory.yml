@@ -1,0 +1,32 @@
+name: Test working-directory input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake curl to intercept CodSpeed installer
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" "$HOME/.local/bin/curl"
+          chmod +x "$HOME/.local/bin/curl"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Create a working directory for the test
+        run: mkdir -p /tmp/bench-workdir
+
+      - name: Run CodSpeed action with working-directory and allow-empty
+        id: action
+        uses: .
+        with:
+          mode: walltime
+          working-directory: /tmp/bench-workdir
+          allow-empty: "true"
+          runner-version: "latest"
+          skip-hash-check-warning: "true"
+
+      - name: Assert action completed successfully with working-directory
+        run: |
+          echo "PASS: CodSpeed action completed with working-directory set"
