@@ -1,0 +1,38 @@
+#!/bin/sh
+# Fake curl: intercepts codspeed.io install URLs and serves a fake installer.
+# Supports both "curl URL | sh" (payload to stdout) and
+# "curl -sSL -o FILE -w '%{http_code}' URL" (payload to FILE, http_code to stdout).
+# A stdout-only mock breaks hardened actions that use -o.
+
+out=""
+write_out=""
+prev=""
+for arg in "$@"; do
+  case "$prev" in
+    -o|--output) out="$arg" ;;
+    -w|--write-out) write_out="$arg" ;;
+  esac
+  prev="$arg"
+done
+
+FAKE_INSTALLER="$GITHUB_WORKSPACE/tests/fixtures/fake-codspeed-install.sh"
+
+# Check if this is a codspeed.io install URL
+case "$*" in
+  *codspeed.io*install.sh*)
+    if [ -n "$out" ]; then
+      # Hardened form: write payload to file, print http_code to stdout
+      cat "$FAKE_INSTALLER" > "$out"
+      if [ -n "$write_out" ]; then
+        echo "200"
+      fi
+    else
+      # Pipe form: print payload to stdout
+      cat "$FAKE_INSTALLER"
+    fi
+    exit 0
+    ;;
+esac
+
+# Fall through to real curl for other URLs
+exec /usr/bin/curl "$@"

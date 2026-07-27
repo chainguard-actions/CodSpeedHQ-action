@@ -1,0 +1,29 @@
+name: Test latest runner version with suppressed warning
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake curl to mock CodSpeed installer
+        run: |
+          mkdir -p /tmp/fake-bin
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl" /tmp/fake-bin/curl
+          chmod +x /tmp/fake-bin/curl
+          echo "/tmp/fake-bin" >> $GITHUB_PATH
+
+      - name: Run CodSpeed action with latest version and suppressed warning
+        id: action
+        uses: .
+        with:
+          mode: "walltime"
+          runner-version: "latest"
+          allow-empty: "true"
+          cache-instruments: "false"
+          skip-hash-check-warning: "true"
+
+      - name: Assert action completed successfully with latest version
+        run: |
+          echo "PASS: CodSpeed action completed with runner-version=latest and skip-hash-check-warning=true"
