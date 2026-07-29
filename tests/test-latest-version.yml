@@ -1,0 +1,69 @@
+name: Test latest version installation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake curl and codspeed binary
+        run: |
+          mkdir -p /tmp/fake-bin "$HOME/.local/bin"
+
+          # Write a fake codspeed binary
+          printf '%s\n' '#!/bin/sh' \
+            'echo "Fake CodSpeed runner: $*"' \
+            'case "$1" in' \
+            '  run) echo "No benchmarks found."; exit 0 ;;' \
+            '  *) echo "Unknown command: $1"; exit 0 ;;' \
+            'esac' > "$HOME/.local/bin/codspeed"
+          chmod +x "$HOME/.local/bin/codspeed"
+
+          # Write a fake installer that just confirms the binary is already in place
+          printf '%s\n' '#!/bin/sh' \
+            'echo "Fake CodSpeed installer running"' \
+            'echo "CodSpeed runner installed successfully (fake)"' > /tmp/fake-codspeed-install.sh
+          chmod +x /tmp/fake-codspeed-install.sh
+
+          # Write a fake curl that intercepts codspeed.io requests
+          printf '%s\n' '#!/bin/sh' \
+            'out=""' \
+            'prev=""' \
+            'for arg in "$@"; do' \
+            '  case "$prev" in' \
+            '    -o|--output) out="$arg" ;;' \
+            '  esac' \
+            '  prev="$arg"' \
+            'done' \
+            'case "$*" in' \
+            '  *codspeed.io*)' \
+            '    if [ -n "$out" ]; then' \
+            '      cat /tmp/fake-codspeed-install.sh > "$out"' \
+            '    else' \
+            '      cat /tmp/fake-codspeed-install.sh' \
+            '    fi' \
+            '    exit 0' \
+            '    ;;' \
+            '  *)' \
+            '    exec /usr/bin/curl "$@"' \
+            '    ;;' \
+            'esac' > /tmp/fake-bin/curl
+          chmod +x /tmp/fake-bin/curl
+
+          echo "/tmp/fake-bin" >> "$GITHUB_PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run CodSpeed action with latest version
+        id: action
+        uses: .
+        with:
+          mode: "walltime"
+          runner-version: "latest"
+          allow-empty: "true"
+          cache-instruments: "false"
+          skip-hash-check-warning: "true"
+
+      - name: Assert action completed successfully
+        run: |
+          echo "PASS: CodSpeed action completed with runner-version=latest"
