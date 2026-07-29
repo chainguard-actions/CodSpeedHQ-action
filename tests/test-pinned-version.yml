@@ -1,0 +1,39 @@
+name: Test pinned runner version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up mock binaries for testing
+        run: |
+          mkdir -p /tmp/mock-bin
+          # Install fake curl that intercepts CodSpeed installer downloads
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" /tmp/mock-bin/curl
+          chmod +x /tmp/mock-bin/curl
+          # Install fake sha256sum that returns the expected hash for version 5.0.1
+          # This allows hash verification to pass with the fake installer
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-sha256sum.sh" /tmp/mock-bin/sha256sum
+          chmod +x /tmp/mock-bin/sha256sum
+          # Add mock-bin to PATH so fake binaries are found before real ones
+          echo "/tmp/mock-bin" >> $GITHUB_PATH
+
+      - name: Run CodSpeed action with a pinned runner version
+        id: action
+        uses: .
+        with:
+          mode: walltime
+          allow-empty: "true"
+          runner-version: "5.0.1"
+          skip-hash-check-warning: "false"
+          cache-instruments: "false"
+
+      - name: Assert action completed successfully with pinned version
+        run: |
+          if ! command -v codspeed > /dev/null 2>&1; then
+            echo "FAIL: codspeed binary not found after action ran"
+            exit 1
+          fi
+          echo "PASS: CodSpeed action completed with pinned runner version 5.0.1"

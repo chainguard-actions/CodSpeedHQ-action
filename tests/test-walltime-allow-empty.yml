@@ -1,0 +1,35 @@
+name: Test walltime mode with allow-empty
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up mock binaries for testing
+        run: |
+          mkdir -p /tmp/mock-bin
+          # Install fake curl that intercepts CodSpeed installer downloads
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" /tmp/mock-bin/curl
+          chmod +x /tmp/mock-bin/curl
+          # Add mock-bin to PATH so fake curl is found before real curl
+          echo "/tmp/mock-bin" >> $GITHUB_PATH
+
+      - name: Run CodSpeed action with walltime mode and allow-empty
+        id: action
+        uses: .
+        with:
+          mode: walltime
+          allow-empty: "true"
+          runner-version: "latest"
+          skip-hash-check-warning: "true"
+          cache-instruments: "false"
+
+      - name: Assert action completed successfully
+        run: |
+          if ! command -v codspeed > /dev/null 2>&1; then
+            echo "FAIL: codspeed binary not found after action ran"
+            exit 1
+          fi
+          echo "PASS: CodSpeed action completed with walltime mode and allow-empty=true"

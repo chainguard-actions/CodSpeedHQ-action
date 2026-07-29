@@ -1,0 +1,35 @@
+name: Test with caching disabled
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up mock binaries for testing
+        run: |
+          mkdir -p /tmp/mock-bin
+          # Install fake curl that intercepts CodSpeed installer downloads
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" /tmp/mock-bin/curl
+          chmod +x /tmp/mock-bin/curl
+          # Add mock-bin to PATH so fake curl is found before real curl
+          echo "/tmp/mock-bin" >> $GITHUB_PATH
+
+      - name: Run CodSpeed action with cache-instruments disabled
+        id: action
+        uses: .
+        with:
+          mode: walltime
+          allow-empty: "true"
+          cache-instruments: "false"
+          runner-version: "latest"
+          skip-hash-check-warning: "true"
+
+      - name: Assert action completed successfully without caching
+        run: |
+          if ! command -v codspeed > /dev/null 2>&1; then
+            echo "FAIL: codspeed binary not found after action ran"
+            exit 1
+          fi
+          echo "PASS: CodSpeed action completed with cache-instruments=false"
