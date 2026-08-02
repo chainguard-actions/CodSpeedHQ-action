@@ -1,0 +1,26 @@
+name: Test optional inputs coverage
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          mode: walltime
+          allow-empty: "true"
+          token: "fake-upload-token-for-testing"
+          upload-url: "https://api.codspeed.io/upload"
+          instruments: ""
+          mongo-uri-env-name: "MONGO_URI"
+          go-runner-version: ""
+          config: ""
+          cycle-estimation: "true"
+          exclude-allocations: "false"
+          runner-version: "latest"
+          skip-hash-check-warning: "true"
+      - name: Assert action completed
+        run: |
+          echo "PASS: action completed with optional inputs set"

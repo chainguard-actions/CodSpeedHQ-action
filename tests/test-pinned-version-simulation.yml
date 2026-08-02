@@ -1,0 +1,36 @@
+name: Test pinned version with simulation mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake curl and sha256sum to intercept CodSpeed installer
+        run: |
+          mkdir -p "$HOME/.local/bin"
+
+          # Fake curl: serve fake install script for CodSpeed URLs
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl.sh" "$HOME/.local/bin/curl"
+          chmod +x "$HOME/.local/bin/curl"
+
+          # Fake sha256sum: return the expected hash for version 5.0.1
+          # so hash verification passes with our fake installer
+          printf '#!/bin/sh\necho "5d8abb100020c7968220ab856c776670abfdc77bb0fac532c56f695af4f4a098  $1"\n' \
+            > "$HOME/.local/bin/sha256sum"
+          chmod +x "$HOME/.local/bin/sha256sum"
+
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - id: action
+        uses: .
+        with:
+          mode: simulation
+          run: "echo 'no benchmarks here'"
+          allow-empty: "true"
+          runner-version: "5.0.1"
+
+      - name: Assert action completed successfully with pinned version
+        run: |
+          echo "PASS: action completed with pinned version 5.0.1 and simulation mode"
