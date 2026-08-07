@@ -23,6 +23,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v5.0.0 | [`v5.0.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v5.0.0) | [`f87ba88`](https://github.com/CodSpeedHQ/action/commit/f87ba88d8df49f904707c82ddc254bc791b049f5) |
 | v5.0.1 | [`v5.0.1`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v5.0.1) | [`8847237`](https://github.com/CodSpeedHQ/action/commit/88472375d0a4572cf70a9f1fe3a4e0ab8da1b924) |
 | v5.0.2 | [`v5.0.2`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v5.0.2) | [`0ca9cbb`](https://github.com/CodSpeedHQ/action/commit/0ca9cbbf4623b599a6c3ed4fc8a922942705d9f1) |
+| v5.0.3 | [`v5.0.3`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v5.0.3) | [`4296e51`](https://github.com/CodSpeedHQ/action/commit/4296e51e7041e24dadb86d1d6e8b9320d223dbe8) |
 
 ## Privacy
 
