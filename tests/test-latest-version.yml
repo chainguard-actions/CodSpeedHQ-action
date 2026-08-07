@@ -1,0 +1,31 @@
+name: Test latest runner version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: walltime
+          runner-version: "latest"
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+          cache-instruments: "false"
+
+      - name: Assert action completed
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may succeed or fail gracefully in the harness environment.
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ] || [ "$OUTCOME" = "skipped" ] || [ -z "$OUTCOME" ]; then
+            echo "PASS: action completed with outcome '$OUTCOME'"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

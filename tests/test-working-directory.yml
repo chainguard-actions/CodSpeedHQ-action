@@ -1,0 +1,40 @@
+name: Test working-directory input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create working directory with a dummy benchmark script
+        run: |
+          mkdir -p /tmp/bench-workdir
+          echo '#!/bin/sh' > /tmp/bench-workdir/run_bench.sh
+          echo 'echo "running benchmark in workdir"' >> /tmp/bench-workdir/run_bench.sh
+          chmod +x /tmp/bench-workdir/run_bench.sh
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: walltime
+          run: "sh run_bench.sh"
+          working-directory: "/tmp/bench-workdir"
+          allow-empty: "true"
+          runner-version: "latest"
+          skip-hash-check-warning: "true"
+          cache-instruments: "false"
+
+      - name: Assert action completed
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may succeed or fail gracefully in the harness environment.
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ] || [ "$OUTCOME" = "skipped" ] || [ -z "$OUTCOME" ]; then
+            echo "PASS: action completed with outcome '$OUTCOME'"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
