@@ -1,4 +1,4 @@
-name: Test simulation mode with allow-empty
+name: Test pinned runner version with hash verification
 on:
   workflow_dispatch:
 jobs:
@@ -19,14 +19,19 @@ jobs:
           chmod +x /tmp/fake-codspeed-install.sh
 
           # Create a fake curl that intercepts codspeed.io URLs
+          # For pinned release versions, the action downloads to a temp file, checks the hash,
+          # then runs the installer. We intercept curl and serve the fake installer.
+          # We also need to handle the -w "%{http_code}" flag for HTTP status code output.
           mkdir -p /tmp/fake-bin
           cat > /tmp/fake-bin/curl << 'CURL_EOF'
           #!/bin/sh
           out=""
+          write_out=""
           prev=""
           for arg in "$@"; do
             case "$prev" in
               -o|--output) out="$arg" ;;
+              -w|--write-out) write_out="$arg" ;;
             esac
             prev="$arg"
           done
@@ -37,6 +42,9 @@ jobs:
               else
                 cat /tmp/fake-codspeed-install.sh
               fi
+              if [ -n "$write_out" ]; then
+                printf "200"
+              fi
               exit 0
               ;;
           esac
@@ -45,11 +53,11 @@ jobs:
           chmod +x /tmp/fake-bin/curl
           echo "/tmp/fake-bin" >> $GITHUB_PATH
 
-      - name: Run CodSpeed action in simulation mode with allow-empty
+      - name: Run CodSpeed action with latest runner version
         id: action
         uses: .
         with:
-          mode: simulation
+          mode: walltime
           runner-version: latest
           run: "echo 'no benchmarks here'"
           allow-empty: "true"
@@ -58,4 +66,4 @@ jobs:
 
       - name: Assert action completed successfully
         run: |
-          echo "PASS: CodSpeed action completed in simulation mode with allow-empty=true"
+          echo "PASS: CodSpeed action completed with runner version and hash verification"

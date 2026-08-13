@@ -1,4 +1,4 @@
-name: Test simulation mode with allow-empty
+name: Test with cache-instruments disabled
 on:
   workflow_dispatch:
 jobs:
@@ -45,11 +45,11 @@ jobs:
           chmod +x /tmp/fake-bin/curl
           echo "/tmp/fake-bin" >> $GITHUB_PATH
 
-      - name: Run CodSpeed action in simulation mode with allow-empty
+      - name: Run CodSpeed action with caching disabled
         id: action
         uses: .
         with:
-          mode: simulation
+          mode: walltime
           runner-version: latest
           run: "echo 'no benchmarks here'"
           allow-empty: "true"
@@ -58,4 +58,4 @@ jobs:
 
       - name: Assert action completed successfully
         run: |
-          echo "PASS: CodSpeed action completed in simulation mode with allow-empty=true"
+          echo "PASS: CodSpeed action completed with cache-instruments=false"

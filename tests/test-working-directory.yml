@@ -1,4 +1,4 @@
-name: Test simulation mode with allow-empty
+name: Test working-directory input
 on:
   workflow_dispatch:
 jobs:
@@ -45,17 +45,23 @@ jobs:
           chmod +x /tmp/fake-bin/curl
           echo "/tmp/fake-bin" >> $GITHUB_PATH
 
-      - name: Run CodSpeed action in simulation mode with allow-empty
+      - name: Create a working directory with a marker file
+        run: |
+          mkdir -p /tmp/bench-workdir
+          echo "marker" > /tmp/bench-workdir/marker.txt
+
+      - name: Run CodSpeed action with working-directory
         id: action
         uses: .
         with:
-          mode: simulation
+          mode: walltime
           runner-version: latest
-          run: "echo 'no benchmarks here'"
+          working-directory: /tmp/bench-workdir
+          run: "cat marker.txt"
           allow-empty: "true"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
 
       - name: Assert action completed successfully
         run: |
-          echo "PASS: CodSpeed action completed in simulation mode with allow-empty=true"
+          echo "PASS: CodSpeed action completed with working-directory set"

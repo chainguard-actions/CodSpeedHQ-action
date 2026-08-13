@@ -1,0 +1,59 @@
+name: Bump the runner version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Runner version"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - name: Bump
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          # Check that the version is a valid semver
+          if ! echo "$INPUT_VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "Invalid version"
+              exit 1
+          fi
+          # Check that this release exists in the CodSpeedHQ/codspeed repository
+          if ! gh release view "v${INPUT_VERSION}" -R CodSpeedHQ/codspeed; then
+            echo "Release $INPUT_VERSION does not exist in CodSpeedHQ/codspeed"
+            exit 1
+          fi
+
+          VERSION="$INPUT_VERSION"
+
+          # Fetch the installer hash from the GitHub API
+          INSTALLER_HASH=$(gh api "repos/CodSpeedHQ/codspeed/releases/tags/v${VERSION}" --jq '.assets[] | select(.name == "codspeed-runner-installer.sh") | .digest | ltrimstr("sha256:")')
+          if [ -z "$INSTALLER_HASH" ]; then
+            echo "Error: Could not fetch installer hash for version $VERSION"
+            exit 1
+          fi
+          echo "Installer hash for $VERSION: $INSTALLER_HASH"
+
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          echo "Bumping runner version to $VERSION"
+          BRANCH_NAME="bump-runner-version/$VERSION"
+          git checkout -b "$BRANCH_NAME"
+
+          echo "$VERSION" > .codspeed-runner-version
+          jq --arg v "$VERSION" --arg h "$INSTALLER_HASH" '. + {($v): $h}' .codspeed-runner-installer-hashes.json > .codspeed-runner-installer-hashes.json.tmp && mv .codspeed-runner-installer-hashes.json.tmp .codspeed-runner-installer-hashes.json
+
+          git add .codspeed-runner-version .codspeed-runner-installer-hashes.json
+          git commit -m "chore: bump runner version to $VERSION"
+          git push origin "$BRANCH_NAME"
+          gh pr create --title "chore: bump runner version to $VERSION" --body "Bump runner version to $VERSION" --base main --head "$BRANCH_NAME"
