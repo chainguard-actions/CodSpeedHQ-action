@@ -1,0 +1,59 @@
+#!/bin/sh
+# Fake curl: intercepts CodSpeed installer downloads and serves a fake install script.
+# Supports both "curl URL | sh" (stdout) and "curl -o FILE URL" (write to file).
+# Falls through to real curl for all other URLs.
+
+out=""
+prev=""
+for arg in "$@"; do
+  case "$prev" in
+    -o|--output|-O) out="$arg" ;;
+  esac
+  prev="$arg"
+done
+
+# Check if this is a CodSpeed installer URL
+case "$*" in
+  *codspeed.io*install.sh*|*codspeed.io/install.sh*|*codspeed.io/v*/install.sh*)
+    # Find the fake install script relative to this script's location or via GITHUB_WORKSPACE
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    # Try GITHUB_WORKSPACE first, then relative to script location
+    if [ -n "$GITHUB_WORKSPACE" ] && [ -f "$GITHUB_WORKSPACE/tests/fixtures/fake-codspeed-install.sh" ]; then
+      FAKE_INSTALL="$GITHUB_WORKSPACE/tests/fixtures/fake-codspeed-install.sh"
+    elif [ -f "$SCRIPT_DIR/fake-codspeed-install.sh" ]; then
+      FAKE_INSTALL="$SCRIPT_DIR/fake-codspeed-install.sh"
+    else
+      # Fallback: emit an inline fake installer
+      FAKE_INSTALL=""
+    fi
+
+    if [ -n "$FAKE_INSTALL" ]; then
+      if [ -n "$out" ]; then
+        cat "$FAKE_INSTALL" > "$out"
+      else
+        cat "$FAKE_INSTALL"
+      fi
+    else
+      # Inline fallback fake installer
+      INLINE='#!/bin/sh
+mkdir -p "$HOME/.local/bin"
+cat > "$HOME/.local/bin/codspeed" << '"'"'CSEOF'"'"'
+#!/bin/sh
+echo "codspeed (fake) $@"
+exit 0
+CSEOF
+chmod +x "$HOME/.local/bin/codspeed"
+[ -w /usr/local/bin ] && cp "$HOME/.local/bin/codspeed" /usr/local/bin/codspeed
+echo "Fake CodSpeed runner installed"'
+      if [ -n "$out" ]; then
+        printf '%s\n' "$INLINE" > "$out"
+      else
+        printf '%s\n' "$INLINE"
+      fi
+    fi
+    exit 0
+    ;;
+esac
+
+# Fall through to real curl for other URLs
+exec /usr/bin/curl "$@"

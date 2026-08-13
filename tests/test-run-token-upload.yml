@@ -1,0 +1,22 @@
+name: Test run, token, and upload-url inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run CodSpeed action with run, token, and upload-url inputs
+        id: action
+        uses: .
+        with:
+          run: "echo 'benchmark placeholder'"
+          mode: walltime
+          token: "fake-codspeed-token"
+          upload-url: "https://api.codspeed.io/upload"
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+          runner-version: "latest"
+      - name: Assert action completed
+        run: |
+          echo "PASS: action completed with run, token, and upload-url inputs"

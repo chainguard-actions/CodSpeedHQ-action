@@ -6,21 +6,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Create config file
+      - name: Create a minimal CodSpeed config file
         run: |
           cat > /tmp/codspeed.yml << 'EOF'
           version: 1
           EOF
-      - id: action
+      - name: Run CodSpeed action with go-runner-version and config inputs
+        id: action
         uses: .
         with:
-          mode: simulation
-          run: "echo 'no benchmarks'"
+          mode: walltime
           go-runner-version: "1.0.0"
           config: "/tmp/codspeed.yml"
           allow-empty: "true"
-          runner-version: "latest"
           skip-hash-check-warning: "true"
+          runner-version: "latest"
       - name: Assert action completed
         run: |
           echo "PASS: action completed with go-runner-version and config inputs"

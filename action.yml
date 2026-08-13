@@ -131,8 +131,7 @@ runs:
         echo "kernel-version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
 
         # Normalize mode for cache key (commas are not allowed in cache keys)
-        safe_mode=$(printf '%s' "$INPUT_MODE" | tr -d '\n\r')
-        MODE_CACHE_KEY=$(printf '%s' "$safe_mode" | tr ',' '-')
+        MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr ',' '-' | tr -d '\n\r')
         echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT
     - name: Cache CodSpeed instruments
       if: inputs.cache-instruments == 'true'
@@ -155,25 +154,20 @@ runs:
     - name: Install CodSpeed runner
       shell: bash
       env:
-        INPUT_RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
-        INPUT_VERSION_TYPE: ${{ steps.versions.outputs.version-type }}
-        INPUT_SKIP_HASH_CHECK_WARNING: ${{ inputs.skip-hash-check-warning }}
-        INPUT_EXPECTED_HASH: ${{ steps.installer-hash.outputs.hash }}
+        RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
+        VERSION_TYPE: ${{ steps.versions.outputs.version-type }}
+        SKIP_HASH_CHECK_WARNING: ${{ inputs.skip-hash-check-warning }}
+        EXPECTED_HASH: ${{ steps.installer-hash.outputs.hash }}
       run: |
-        RUNNER_VERSION="$INPUT_RUNNER_VERSION"
-        VERSION_TYPE="$INPUT_VERSION_TYPE"
-
-        SKIP_HASH_CHECK_WARNING="$INPUT_SKIP_HASH_CHECK_WARNING"
-
         if [ "$VERSION_TYPE" = "latest" ]; then
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
           fi
-          # Download to temp file and execute separately (do not pipe directly from internet)
+          INSTALLER_URL="https://codspeed.io/install.sh"
           INSTALLER_TMP=$(mktemp)
           trap "rm -f $INSTALLER_TMP" EXIT
           CURL_ERR=$(mktemp)
-          if ! HTTP_CODE=$(curl -fsSL -o "$INSTALLER_TMP" -w "%{http_code}" https://codspeed.io/install.sh 2>"$CURL_ERR"); then
+          if ! HTTP_CODE=$(curl -sSL -o "$INSTALLER_TMP" -w "%{http_code}" "$INSTALLER_URL" 2>"$CURL_ERR"); then
             echo "::error title=Failed to install CodSpeed CLI::Installation of CodSpeed CLI (latest) failed.%0AReason: $(cat "$CURL_ERR")"
             exit 1
           fi
@@ -214,7 +208,6 @@ runs:
             exit 1
           fi
 
-          EXPECTED_HASH="$INPUT_EXPECTED_HASH"
           if [ -z "$EXPECTED_HASH" ]; then
             echo "::error::No pinned hash found for installer version $RUNNER_VERSION. Update .codspeed-runner-installer-hashes.json."
             exit 1

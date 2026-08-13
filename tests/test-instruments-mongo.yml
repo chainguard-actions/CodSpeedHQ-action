@@ -1,0 +1,21 @@
+name: Test instruments and mongo-uri-env-name inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Run CodSpeed action with instruments and mongo-uri-env-name inputs
+        id: action
+        uses: .
+        with:
+          mode: walltime
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+          runner-version: "latest"
+      - name: Assert action completed
+        run: |
+          echo "PASS: action completed with instruments and mongo-uri-env-name inputs"
