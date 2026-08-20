@@ -8,7 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
-| v4.13.0 | [`v4.13.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.13.0) | — |
+| v4.13.0 | [`v4.13.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.13.0) | [`d872884`](https://github.com/CodSpeedHQ/action/commit/d872884a306dd4853acf0f584f4b706cf0cc72a2) |
 | v4.13.1 | [`v4.13.1`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.13.1) | [`db35df7`](https://github.com/CodSpeedHQ/action/commit/db35df748deb45fdef0960669f57d627c1956c30) |
 | v4.14.0 | [`v4.14.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.14.0) | — |
 | v4.15.0 | [`v4.15.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v4.15.0) | [`c381be0`](https://github.com/CodSpeedHQ/action/commit/c381be0bfd20e844fb45594f6aa182ffcd94545c) |
