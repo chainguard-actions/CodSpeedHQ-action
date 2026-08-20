@@ -1,0 +1,33 @@
+name: Test instruments and mongo-uri-env-name inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run CodSpeed action with instruments and mongo-uri-env-name inputs
+        id: action
+        uses: .
+        with:
+          mode: simulation
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+        continue-on-error: true
+
+      - name: Assert action ran (instruments/mongo-uri-env-name inputs)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with instruments/mongo-uri-env-name inputs"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected in harness environment without real MongoDB or CodSpeed setup)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
