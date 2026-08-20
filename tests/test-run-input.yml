@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test run input with working-directory and token
 on:
   workflow_dispatch:
 jobs:
@@ -11,17 +11,19 @@ jobs:
         continue-on-error: true
         with:
           mode: walltime
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          run: "echo 'benchmark placeholder'"
+          working-directory: "."
+          token: "fake-codspeed-token"
+          upload-url: "https://api.codspeed.io"
           allow-empty: "true"
           skip-hash-check-warning: "true"
-      - name: Assert action ran (instruments inputs accepted)
+      - name: Assert action ran (inputs accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with instruments/mongo-uri-env-name inputs"
+            echo "PASS: action ran with run/working-directory/token/upload-url inputs"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

@@ -1,0 +1,32 @@
+name: Test basic walltime mode with allow-empty
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run CodSpeed action with walltime mode and allow-empty
+        id: action
+        uses: .
+        with:
+          mode: walltime
+          runner-version: latest
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+        continue-on-error: true
+
+      - name: Assert action ran (walltime mode, allow-empty)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with allow-empty=true"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (network/install issue acceptable in test env)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

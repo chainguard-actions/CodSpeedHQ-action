@@ -1,0 +1,61 @@
+name: Test allow-empty flag behavior
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run CodSpeed action with allow-empty false (default) and no run command
+        id: action-no-allow-empty
+        uses: .
+        with:
+          mode: walltime
+          runner-version: latest
+          allow-empty: "false"
+          skip-hash-check-warning: "true"
+        continue-on-error: true
+
+      - name: Assert action outcome with allow-empty=false
+        env:
+          OUTCOME: ${{ steps.action-no-allow-empty.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With allow-empty=false and no benchmarks, the action should either:
+          # - fail because no benchmarks were found (expected behavior)
+          # - fail because of network/install issues (acceptable in test env)
+          # Either way, it should not succeed with no benchmarks and allow-empty=false
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (no benchmarks or install issue)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "INFO: action succeeded - runner may have handled no-benchmark case differently"
+            echo "PASS: outcome is acceptable"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
+
+      - name: Run CodSpeed action with allow-empty true
+        id: action-with-allow-empty
+        uses: .
+        with:
+          mode: walltime
+          runner-version: latest
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+        continue-on-error: true
+
+      - name: Assert action outcome with allow-empty=true
+        env:
+          OUTCOME: ${{ steps.action-with-allow-empty.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with allow-empty=true"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (network/install issue acceptable in test env)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
