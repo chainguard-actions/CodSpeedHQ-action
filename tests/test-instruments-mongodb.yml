@@ -1,4 +1,4 @@
-name: Test go-runner-version input
+name: Test instruments and mongo-uri-env-name inputs
 on:
   workflow_dispatch:
 jobs:
@@ -60,20 +60,27 @@ jobs:
           allow-empty: "true"
           runner-version: "latest"
           skip-hash-check-warning: "true"
-          go-runner-version: "1.0.0"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
 
-      - name: Assert action completed and go-runner-version was passed
+      - name: Assert action completed and instruments/mongo-uri-env-name were passed
         run: |
-          echo "Checking codspeed was called with go-runner-version arg..."
+          echo "Checking codspeed was called with instruments and mongo-uri-env-name args..."
           if [ ! -f /tmp/codspeed-args.txt ]; then
             echo "FAIL: codspeed was not called"
             exit 1
           fi
           ARGS=$(cat /tmp/codspeed-args.txt)
           echo "codspeed args: $ARGS"
-          if echo "$ARGS" | grep -q -- "--go-runner-version"; then
-            echo "PASS: --go-runner-version argument was passed"
+          if echo "$ARGS" | grep -q -- "--instruments"; then
+            echo "PASS: --instruments argument was passed"
           else
-            echo "FAIL: --go-runner-version argument was not passed to codspeed"
+            echo "FAIL: --instruments argument was not passed to codspeed"
+            exit 1
+          fi
+          if echo "$ARGS" | grep -q -- "--mongo-uri-env-name"; then
+            echo "PASS: --mongo-uri-env-name argument was passed"
+          else
+            echo "FAIL: --mongo-uri-env-name argument was not passed to codspeed"
             exit 1
           fi
