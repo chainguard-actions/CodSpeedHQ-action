@@ -1,4 +1,4 @@
-name: Test with token and upload-url inputs
+name: Test token and upload-url inputs
 on:
   workflow_dispatch:
 jobs:
@@ -11,45 +11,51 @@ jobs:
         run: |
           mkdir -p /tmp/fake-bin "$HOME/.local/bin"
 
-          # Write a fake codspeed binary that records its arguments
-          printf '%s\n' '#!/bin/sh' \
-            'echo "Fake CodSpeed runner args: $*"' \
-            'echo "$*" > /tmp/codspeed-args.txt' \
-            'case "$1" in' \
-            '  run) echo "No benchmarks found."; exit 0 ;;' \
-            '  *) echo "Unknown command: $1"; exit 0 ;;' \
-            'esac' > "$HOME/.local/bin/codspeed"
+          # Write a fake codspeed binary that captures args to a file
+          cat > "$HOME/.local/bin/codspeed" << 'CODSPEED_EOF'
+          #!/bin/sh
+          echo "Fake CodSpeed runner args: $*"
+          echo "$*" > /tmp/codspeed-args.txt
+          case "$1" in
+            run) echo "No benchmarks found."; exit 0 ;;
+            *) echo "Unknown command: $1"; exit 0 ;;
+          esac
+          CODSPEED_EOF
           chmod +x "$HOME/.local/bin/codspeed"
 
           # Write a fake installer
-          printf '%s\n' '#!/bin/sh' \
-            'echo "Fake CodSpeed installer running"' \
-            'echo "CodSpeed runner installed successfully (fake)"' > /tmp/fake-codspeed-install.sh
+          cat > /tmp/fake-codspeed-install.sh << 'INSTALL_EOF'
+          #!/bin/sh
+          echo "Fake CodSpeed installer running"
+          echo "CodSpeed runner installed successfully (fake)"
+          INSTALL_EOF
           chmod +x /tmp/fake-codspeed-install.sh
 
-          # Write a fake curl that intercepts codspeed.io requests
-          printf '%s\n' '#!/bin/sh' \
-            'out=""' \
-            'prev=""' \
-            'for arg in "$@"; do' \
-            '  case "$prev" in' \
-            '    -o|--output) out="$arg" ;;' \
-            '  esac' \
-            '  prev="$arg"' \
-            'done' \
-            'case "$*" in' \
-            '  *codspeed.io*)' \
-            '    if [ -n "$out" ]; then' \
-            '      cat /tmp/fake-codspeed-install.sh > "$out"' \
-            '    else' \
-            '      cat /tmp/fake-codspeed-install.sh' \
-            '    fi' \
-            '    exit 0' \
-            '    ;;' \
-            '  *)' \
-            '    exec /usr/bin/curl "$@"' \
-            '    ;;' \
-            'esac' > /tmp/fake-bin/curl
+          # Write a fake curl that intercepts codspeed.io requests and honors -o flag
+          cat > /tmp/fake-bin/curl << 'CURL_EOF'
+          #!/bin/sh
+          out=""
+          prev=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *codspeed.io*)
+              if [ -n "$out" ]; then
+                cat /tmp/fake-codspeed-install.sh > "$out"
+              else
+                cat /tmp/fake-codspeed-install.sh
+              fi
+              exit 0
+              ;;
+            *)
+              exec /usr/bin/curl "$@"
+              ;;
+          esac
+          CURL_EOF
           chmod +x /tmp/fake-bin/curl
 
           echo "/tmp/fake-bin" >> "$GITHUB_PATH"
@@ -64,24 +70,25 @@ jobs:
           allow-empty: "true"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
-          token: "fake-codspeed-token-for-testing"
-          upload-url: "https://example.com/upload"
+          token: "test-codspeed-token-12345"
+          upload-url: "https://api.example.com/upload"
 
-      - name: Assert action completed and token/upload-url were passed
+      - name: Assert token and upload-url were passed to runner
         run: |
-          echo "Checking codspeed runner was called with token and upload-url..."
-          if [ ! -f /tmp/codspeed-args.txt ]; then
-            echo "FAIL: codspeed binary was not called"
+          echo "Captured args:"
+          cat /tmp/codspeed-args.txt || echo "(no args file)"
+          ARGS=$(cat /tmp/codspeed-args.txt 2>/dev/null || echo "")
+          echo "args: $ARGS"
+          if echo "$ARGS" | grep -q -- "--token"; then
+            echo "PASS: --token argument was passed"
+          else
+            echo "FAIL: --token argument was not passed to codspeed runner"
             exit 1
           fi
-          ARGS=$(cat /tmp/codspeed-args.txt)
-          echo "Args: $ARGS"
-          if ! echo "$ARGS" | grep -q -- "--token"; then
-            echo "FAIL: expected --token argument to be passed"
+          if echo "$ARGS" | grep -q -- "--upload-url"; then
+            echo "PASS: --upload-url argument was passed"
+          else
+            echo "FAIL: --upload-url argument was not passed to codspeed runner"
             exit 1
           fi
-          if ! echo "$ARGS" | grep -q -- "--upload-url"; then
-            echo "FAIL: expected --upload-url argument to be passed"
-            exit 1
-          fi
-          echo "PASS: token and upload-url were passed to the runner"
+          echo "PASS: token and upload-url inputs correctly forwarded to runner"

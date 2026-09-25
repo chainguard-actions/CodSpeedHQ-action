@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test go-runner-version input
 on:
   workflow_dispatch:
 jobs:
@@ -61,7 +61,7 @@ jobs:
           echo "/tmp/fake-bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run CodSpeed action with instruments and mongo-uri-env-name
+      - name: Run CodSpeed action with go-runner-version
         id: action
         uses: .
         with:
@@ -70,25 +70,18 @@ jobs:
           allow-empty: "true"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          go-runner-version: "1.0.0"
 
-      - name: Assert instruments and mongo-uri-env-name were passed to runner
+      - name: Assert go-runner-version was passed to runner
         run: |
           echo "Captured args:"
           cat /tmp/codspeed-args.txt || echo "(no args file)"
           ARGS=$(cat /tmp/codspeed-args.txt 2>/dev/null || echo "")
           echo "args: $ARGS"
-          if echo "$ARGS" | grep -q -- "--instruments"; then
-            echo "PASS: --instruments argument was passed"
+          if echo "$ARGS" | grep -q -- "--go-runner-version"; then
+            echo "PASS: --go-runner-version argument was passed"
           else
-            echo "FAIL: --instruments argument was not passed to codspeed runner"
+            echo "FAIL: --go-runner-version argument was not passed to codspeed runner"
             exit 1
           fi
-          if echo "$ARGS" | grep -q -- "--mongo-uri-env-name"; then
-            echo "PASS: --mongo-uri-env-name argument was passed"
-          else
-            echo "FAIL: --mongo-uri-env-name argument was not passed to codspeed runner"
-            exit 1
-          fi
-          echo "PASS: instruments and mongo-uri-env-name inputs correctly forwarded to runner"
+          echo "PASS: go-runner-version input correctly forwarded to runner"
