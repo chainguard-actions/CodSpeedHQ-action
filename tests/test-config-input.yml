@@ -1,4 +1,4 @@
-name: Test config input
+name: Test config input with a CodSpeed config file
 on:
   workflow_dispatch:
 jobs:
@@ -6,13 +6,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+
+      - name: Set up fake curl to mock CodSpeed installer
+        run: |
+          mkdir -p /tmp/fake-bin
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl" /tmp/fake-bin/curl
+          chmod +x /tmp/fake-bin/curl
+          echo "/tmp/fake-bin" >> $GITHUB_PATH
+
+      - name: Create a minimal CodSpeed config file
+        run: |
+          mkdir -p /tmp/codspeed-config
+          cat > /tmp/codspeed-config/codspeed.yml << 'EOF'
+          version: 1
+          EOF
+
+      - name: Run CodSpeed action with config input
+        id: action
         uses: .
         with:
-          mode: walltime
-          config: "${{ github.workspace }}/hardened/tests/fixtures/codspeed.yml"
+          mode: "simulation"
+          config: "/tmp/codspeed-config/codspeed.yml"
+          runner-version: "latest"
           allow-empty: "true"
+          cache-instruments: "false"
           skip-hash-check-warning: "true"
-      - name: Assert action completed
+
+      - name: Assert action completed successfully with config input
         run: |
-          echo "PASS: action completed with config input"
+          echo "PASS: CodSpeed action completed with config=/tmp/codspeed-config/codspeed.yml"

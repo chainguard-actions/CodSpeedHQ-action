@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test token and upload-url inputs
 on:
   workflow_dispatch:
 jobs:
@@ -14,18 +14,18 @@ jobs:
           chmod +x /tmp/fake-bin/curl
           echo "/tmp/fake-bin" >> $GITHUB_PATH
 
-      - name: Run CodSpeed action with instruments and mongo-uri-env-name inputs
+      - name: Run CodSpeed action with token and upload-url inputs
         id: action
         uses: .
         with:
           mode: "simulation"
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          token: "test-codspeed-token-12345"
+          upload-url: "https://api.codspeed.io/upload"
           runner-version: "latest"
           allow-empty: "true"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
 
-      - name: Assert action completed successfully with instruments inputs
+      - name: Assert action completed successfully with token and upload-url
         run: |
-          echo "PASS: CodSpeed action completed with instruments=mongodb and mongo-uri-env-name set"
+          echo "PASS: CodSpeed action completed with token and upload-url inputs set"

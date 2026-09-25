@@ -1,4 +1,4 @@
-name: Test run input with token and upload-url
+name: Test run input with a benchmark command
 on:
   workflow_dispatch:
 jobs:
@@ -6,15 +6,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+
+      - name: Set up fake curl to mock CodSpeed installer
+        run: |
+          mkdir -p /tmp/fake-bin
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl" /tmp/fake-bin/curl
+          chmod +x /tmp/fake-bin/curl
+          echo "/tmp/fake-bin" >> $GITHUB_PATH
+
+      - name: Run CodSpeed action with run input
+        id: action
         uses: .
         with:
+          mode: "walltime"
           run: "echo 'benchmark placeholder'"
-          mode: walltime
-          token: "fake-codspeed-token"
-          upload-url: "https://api.codspeed.io"
+          runner-version: "latest"
           allow-empty: "true"
+          cache-instruments: "false"
           skip-hash-check-warning: "true"
-      - name: Assert action completed
+
+      - name: Assert action completed successfully with run input
         run: |
-          echo "PASS: action completed with run, token, and upload-url inputs"
+          echo "PASS: CodSpeed action completed with run input set"
