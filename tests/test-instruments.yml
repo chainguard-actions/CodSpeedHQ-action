@@ -1,4 +1,4 @@
-name: Test token and upload-url inputs
+name: Test instruments and mongo-uri-env-name inputs
 on:
   workflow_dispatch:
 jobs:
@@ -11,20 +11,20 @@ jobs:
         continue-on-error: true
         with:
           mode: simulation
-          token: fake-codspeed-token
-          upload-url: "https://localhost:9999/upload"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
           allow-empty: "true"
           runner-version: "latest"
           skip-hash-check-warning: "true"
-      - name: Assert action ran with token and upload-url inputs
+      - name: Assert action ran with instruments and mongo-uri-env-name inputs
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action may succeed (allow-empty) or fail due to unreachable upload-url.
-          # Either way, the inputs were accepted and processed — that's what we're testing.
+          # The action may succeed or fail depending on whether mongodb instrument
+          # is available/configured. Either way, the inputs were accepted and processed.
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with token and upload-url inputs (outcome: $OUTCOME)"
+            echo "PASS: action ran with instruments and mongo-uri-env-name inputs (outcome: $OUTCOME)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
