@@ -1,4 +1,4 @@
-name: Test go-runner-version input
+name: Test token and upload-url inputs
 on:
   workflow_dispatch:
 jobs:
@@ -11,17 +11,18 @@ jobs:
         continue-on-error: true
         with:
           mode: "walltime"
-          go-runner-version: "1.0.0"
+          token: "fake-codspeed-token"
+          upload-url: "https://api.codspeed.io"
           allow-empty: "true"
           skip-hash-check-warning: "true"
           runner-version: "latest"
-      - name: Assert action ran (go-runner-version input accepted)
+      - name: Assert action ran (token and upload-url inputs accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with go-runner-version input"
+            echo "PASS: action succeeded with token and upload-url inputs"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (expected in harness environment without real CodSpeed setup)"
           else
