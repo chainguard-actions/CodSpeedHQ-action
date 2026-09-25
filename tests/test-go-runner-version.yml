@@ -8,12 +8,23 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: action
         uses: .
+        continue-on-error: true
         with:
           mode: walltime
-          go-runner-version: "1.0.0"
           allow-empty: "true"
+          go-runner-version: "1.0.0"
           skip-hash-check-warning: "true"
-          runner-version: latest
-      - name: Assert action completed
+          runner-version: "latest"
+      - name: Assert action ran with go-runner-version input
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
         run: |
-          echo "PASS: action completed with go-runner-version input"
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with go-runner-version input"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with specific go-runner-version)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

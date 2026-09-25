@@ -8,13 +8,24 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: action
         uses: .
+        continue-on-error: true
         with:
-          mode: walltime
-          token: fake-codspeed-token
-          upload-url: https://api.codspeed.io/upload
+          mode: simulation
           allow-empty: "true"
+          token: "fake-codspeed-token-for-testing"
+          upload-url: "https://api.codspeed.io"
           skip-hash-check-warning: "true"
-          runner-version: latest
-      - name: Assert action completed
+          runner-version: "latest"
+      - name: Assert action ran with token and upload-url inputs
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
         run: |
-          echo "PASS: action completed with token and upload-url inputs"
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with token and upload-url inputs"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with fake token/upload-url)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

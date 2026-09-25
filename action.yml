@@ -137,7 +137,7 @@ runs:
         echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT
     - name: Cache CodSpeed instruments
       if: inputs.cache-instruments == 'true'
-      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      uses: chainguard-actions/actions-cache@9795b39c6b8efcf95b9e7b38308822eb2fa7ea67 # v5.0.4
       with:
         path: ${{ inputs.instruments-cache-dir }}
         key: codspeed-instruments-${{ steps.versions.outputs.mode-cache-key }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.kernel-version }}-${{ steps.versions.outputs.runner-version }}
@@ -145,7 +145,7 @@ runs:
           codspeed-instruments-${{ steps.versions.outputs.mode-cache-key }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.kernel-version }}-
     - name: Lookup installer hash
       id: installer-hash
-      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+      uses: chainguard-actions/actions-github-script@d3938392869dc1abb006153955add3446aeec543 # v8.0.0
       env:
         RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
       with:
@@ -165,19 +165,19 @@ runs:
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
           fi
-          INSTALLER_TMP=$(mktemp)
-          trap "rm -f $INSTALLER_TMP" EXIT
-          curl -fsSL -o "$INSTALLER_TMP" https://codspeed.io/install.sh
-          bash "$INSTALLER_TMP" --quiet
+          INSTALL_SCRIPT=$(mktemp)
+          trap "rm -f $INSTALL_SCRIPT" EXIT
+          curl -fsSL https://codspeed.io/install.sh -o "$INSTALL_SCRIPT"
+          bash "$INSTALL_SCRIPT" --quiet
         elif [ "$VERSION_TYPE" = "prerelease" ]; then
           # Prereleases are not pinned, so install from the versioned installer without hash verification.
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available for prerelease version $RUNNER_VERSION."
           fi
-          INSTALLER_TMP=$(mktemp)
-          trap "rm -f $INSTALLER_TMP" EXIT
-          curl -fsSL -o "$INSTALLER_TMP" "https://codspeed.io/v$RUNNER_VERSION/install.sh"
-          bash "$INSTALLER_TMP" --quiet
+          INSTALL_SCRIPT=$(mktemp)
+          trap "rm -f $INSTALL_SCRIPT" EXIT
+          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALL_SCRIPT"
+          bash "$INSTALL_SCRIPT" --quiet
         elif [ "$VERSION_TYPE" = "branch" ]; then
           # Install from specific branch using cargo
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
