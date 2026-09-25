@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test go-runner-version and config inputs
 on:
   workflow_dispatch:
 jobs:
@@ -7,26 +7,32 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run CodSpeed action with instruments and mongo-uri-env-name inputs
+      - name: Create a minimal CodSpeed config file
+        run: |
+          cat > /tmp/codspeed.yml <<'EOF'
+          version: 1
+          EOF
+
+      - name: Run CodSpeed action with go-runner-version and config inputs
         id: action
         uses: .
         with:
           mode: walltime
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          go-runner-version: "1.0.0"
+          config: "/tmp/codspeed.yml"
           allow-empty: "true"
           skip-hash-check-warning: "true"
         continue-on-error: true
 
-      - name: Assert action ran (instruments + mongo-uri-env-name inputs)
+      - name: Assert action ran (go-runner-version + config inputs)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action completed successfully with instruments/mongo-uri-env-name inputs"
+            echo "PASS: action completed successfully with go-runner-version/config inputs"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected in harness environment without real CodSpeed runner or MongoDB)"
+            echo "PASS: action failed gracefully (expected in harness environment without real CodSpeed runner)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
