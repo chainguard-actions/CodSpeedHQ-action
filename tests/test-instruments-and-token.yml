@@ -1,4 +1,4 @@
-name: Test go-runner-version and config inputs
+name: Test instruments, token, and upload-url inputs
 on:
   workflow_dispatch:
 jobs:
@@ -11,8 +11,10 @@ jobs:
         continue-on-error: true
         with:
           mode: simulation
-          go-runner-version: "1.0.0"
-          config: codspeed.yml
+          token: fake-codspeed-token
+          upload-url: https://api.codspeed.io
+          instruments: mongodb
+          mongo-uri-env-name: MONGODB_URI
           allow-empty: "true"
           skip-hash-check-warning: "true"
       - name: Assert action ran (succeeded or failed gracefully)
