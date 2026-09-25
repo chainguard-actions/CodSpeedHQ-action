@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test config and go-runner-version inputs
 on:
   workflow_dispatch:
 jobs:
@@ -6,13 +6,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a minimal CodSpeed config file
+        run: |
+          cat > "$GITHUB_WORKSPACE/codspeed.yml" <<'EOF'
+          version: 1
+          EOF
       - id: action
         uses: .
         continue-on-error: true
         with:
           mode: walltime
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          config: "codspeed.yml"
+          go-runner-version: "1.0.0"
           allow-empty: "true"
           skip-hash-check-warning: "true"
           runner-version: "latest"
