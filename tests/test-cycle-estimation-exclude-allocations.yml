@@ -1,4 +1,4 @@
-name: Test go-runner-version input
+name: Test cycle-estimation and exclude-allocations inputs
 on:
   workflow_dispatch:
 jobs:
@@ -11,12 +11,13 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          mode: walltime
+          mode: simulation
           allow-empty: "true"
           runner-version: "latest"
           skip-hash-check-warning: "true"
           cache-instruments: "false"
-          go-runner-version: "1.0.0"
+          cycle-estimation: "true"
+          exclude-allocations: "true"
 
       - name: Assert action completed
         env:
@@ -24,7 +25,8 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           # The action may succeed or fail gracefully in the harness environment.
-          # The go-runner-version may not be available or applicable in this environment.
+          # Simulation mode with cycle-estimation and exclude-allocations may require
+          # valgrind/perf which may not be available in this environment.
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action completed with outcome '$OUTCOME'"
           else
