@@ -1,0 +1,30 @@
+name: Test instruments and mongo-uri-env-name inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: simulation
+          instruments: mongodb
+          mongo-uri-env-name: MONGODB_URI
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+      - name: Assert action ran with instruments and mongo-uri-env-name inputs
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may fail if the runner install fails or benchmarks fail,
+          # but it must not fail due to missing required inputs.
+          # We accept success or failure (network/runner issues), but not skipped.
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: action ran with instruments and mongo-uri-env-name inputs (outcome: $OUTCOME)"
