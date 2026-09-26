@@ -1,4 +1,4 @@
-name: Test run, token, upload-url, working-directory inputs
+name: Test advanced inputs (go-runner-version, cycle-estimation, exclude-allocations, simulation-track-subprocess, config)
 on:
   workflow_dispatch:
 jobs:
@@ -6,17 +6,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Create working directory
-        run: mkdir -p /tmp/bench-workdir
+      - name: Create a minimal codspeed config file
+        run: |
+          cat > /tmp/codspeed.yml <<'EOF'
+          benchmarks:
+            - name: example
+          EOF
       - id: action
         uses: .
         continue-on-error: true
         with:
           mode: simulation
-          run: "echo 'benchmark placeholder'"
-          token: "fake-codspeed-token"
-          upload-url: "https://api.codspeed.io/upload"
-          working-directory: "/tmp/bench-workdir"
+          go-runner-version: "1.0.0"
+          cycle-estimation: "true"
+          exclude-allocations: "false"
+          simulation-track-subprocess: "true"
+          config: "/tmp/codspeed.yml"
           allow-empty: "true"
           skip-hash-check-warning: "true"
       - name: Assert action ran (install or run may fail in test env)
