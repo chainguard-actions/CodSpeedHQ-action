@@ -154,11 +154,16 @@ runs:
     - name: Install CodSpeed runner
       shell: bash
       env:
-        RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
-        VERSION_TYPE: ${{ steps.versions.outputs.version-type }}
-        SKIP_HASH_CHECK_WARNING: ${{ inputs.skip-hash-check-warning }}
-        EXPECTED_HASH: ${{ steps.installer-hash.outputs.hash }}
+        INPUT_RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
+        INPUT_VERSION_TYPE: ${{ steps.versions.outputs.version-type }}
+        INPUT_SKIP_HASH_CHECK_WARNING: ${{ inputs.skip-hash-check-warning }}
+        INPUT_EXPECTED_HASH: ${{ steps.installer-hash.outputs.hash }}
       run: |
+        RUNNER_VERSION="$INPUT_RUNNER_VERSION"
+        VERSION_TYPE="$INPUT_VERSION_TYPE"
+
+        SKIP_HASH_CHECK_WARNING="$INPUT_SKIP_HASH_CHECK_WARNING"
+
         if [ "$VERSION_TYPE" = "latest" ]; then
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
@@ -198,6 +203,7 @@ runs:
             exit 1
           fi
 
+          EXPECTED_HASH="$INPUT_EXPECTED_HASH"
           if [ -z "$EXPECTED_HASH" ]; then
             echo "::error::No pinned hash found for installer version $RUNNER_VERSION. Update .codspeed-runner-installer-hashes.json."
             exit 1

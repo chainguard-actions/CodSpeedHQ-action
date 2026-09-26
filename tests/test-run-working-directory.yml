@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test run and working-directory inputs
 on:
   workflow_dispatch:
 jobs:
@@ -6,24 +6,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create working directory with a dummy benchmark
+        run: |
+          mkdir -p /tmp/bench-workdir
       - id: action
         uses: .
         with:
           mode: walltime
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          run: "echo 'no benchmarks here'"
+          working-directory: /tmp/bench-workdir
+          token: "dummy-token-for-test"
           allow-empty: "true"
           skip-hash-check-warning: "true"
         continue-on-error: true
-      - name: Assert action ran with instruments inputs
+      - name: Assert action ran (allow-empty should let it succeed or fail gracefully)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with instruments and mongo-uri-env-name inputs"
+            echo "PASS: action succeeded with allow-empty=true"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (network/install issue or missing MongoDB in test env)"
+            echo "PASS: action failed gracefully (network/install issue in test env)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

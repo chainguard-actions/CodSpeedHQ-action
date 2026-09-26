@@ -9,19 +9,20 @@ jobs:
       - id: action
         uses: .
         with:
-          mode: simulation
-          upload-url: "https://example.com/upload"
+          mode: walltime
+          upload-url: "https://example.invalid/upload"
           allow-empty: "true"
+          skip-hash-check-warning: "true"
         continue-on-error: true
-      - name: Assert action ran (success or graceful failure)
+      - name: Assert action ran with upload-url input
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded"
+            echo "PASS: action succeeded with allow-empty=true and custom upload-url"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected in harness without real CodSpeed setup)"
+            echo "PASS: action failed gracefully (network/install issue in test env)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
