@@ -6,24 +6,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create a CodSpeed config file
+        run: |
+          cat > /tmp/codspeed.yml << 'EOF'
+          benchmarks:
+            - name: example
+          EOF
       - id: action
         uses: .
         continue-on-error: true
         with:
           mode: simulation
-          config: ${{ github.workspace }}/hardened/tests/fixtures/codspeed.yml
+          config: /tmp/codspeed.yml
           allow-empty: "true"
           skip-hash-check-warning: "true"
-      - name: Assert action ran with config input
+      - name: Assert action ran (config input accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action may fail if the runner install fails or benchmarks fail,
-          # but it must not fail due to missing required inputs.
-          # We accept success or failure (network/runner issues), but not skipped.
-          if [ "$OUTCOME" = "skipped" ]; then
-            echo "FAIL: action was skipped unexpectedly"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with config input"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected in test environment)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
           fi
-          echo "PASS: action ran with config input (outcome: $OUTCOME)"

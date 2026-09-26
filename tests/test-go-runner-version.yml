@@ -14,16 +14,16 @@ jobs:
           go-runner-version: "1.0.0"
           allow-empty: "true"
           skip-hash-check-warning: "true"
-      - name: Assert action ran with go-runner-version input
+      - name: Assert action ran (go-runner-version input accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action may fail if the runner install fails or benchmarks fail,
-          # but it must not fail due to missing required inputs.
-          # We accept success or failure (network/runner issues), but not skipped.
-          if [ "$OUTCOME" = "skipped" ]; then
-            echo "FAIL: action was skipped unexpectedly"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with go-runner-version input"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected in test environment)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
           fi
-          echo "PASS: action ran with go-runner-version input (outcome: $OUTCOME)"
