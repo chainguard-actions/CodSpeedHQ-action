@@ -1,4 +1,4 @@
-name: Test run command with working-directory and token inputs
+name: Test upload-url and config inputs
 on:
   workflow_dispatch:
 jobs:
@@ -7,28 +7,30 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create working directory for test
-        run: mkdir -p /tmp/bench-workdir
+      - name: Create a minimal CodSpeed config file
+        run: |
+          cat > /tmp/codspeed-test.yml <<'EOF'
+          # Minimal CodSpeed config for testing
+          EOF
 
-      - name: Run CodSpeed action with run, working-directory, and token inputs
+      - name: Run CodSpeed action with upload-url and config inputs
         id: action
         uses: .
         with:
           mode: simulation
-          run: "echo 'benchmark placeholder'"
-          working-directory: /tmp/bench-workdir
-          token: "fake-codspeed-token-for-testing"
+          upload-url: "https://api.codspeed.io/upload"
+          config: /tmp/codspeed-test.yml
           allow-empty: "true"
           skip-hash-check-warning: "true"
         continue-on-error: true
 
-      - name: Assert action ran (run + working-directory + token inputs exercised)
+      - name: Assert action ran (upload-url and config inputs exercised)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action completed successfully with run/working-directory/token inputs"
+            echo "PASS: action completed successfully with upload-url and config inputs"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (expected in harness environment without real CodSpeed setup)"
           else
