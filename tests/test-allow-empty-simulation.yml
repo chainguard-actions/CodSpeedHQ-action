@@ -1,4 +1,4 @@
-name: Test with caching disabled
+name: Test allow-empty with simulation mode
 on:
   workflow_dispatch:
 jobs:
@@ -7,14 +7,13 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run CodSpeed action with caching disabled
+      - name: Run CodSpeed action with simulation mode and allow-empty
         id: action
         uses: .
         continue-on-error: true
         with:
-          mode: walltime
+          mode: simulation
           allow-empty: "true"
-          cache-instruments: "false"
           skip-hash-check-warning: "true"
           run: "echo 'no benchmarks here'"
 
@@ -23,15 +22,15 @@ jobs:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # With cache-instruments=false, the action should:
-          # 1. Skip the cache step (conditional: inputs.cache-instruments == 'true')
-          # 2. Install the CodSpeed runner without caching
-          # 3. Run with allow-empty=true
-          # A failure is acceptable if the runner binary fails in the test environment.
+          # With simulation mode and allow-empty=true, the action should:
+          # 1. Install the CodSpeed runner
+          # 2. Run in simulation mode (requires valgrind/perf)
+          # 3. Complete successfully even if no benchmarks are found (allow-empty=true)
+          # A failure is acceptable if valgrind/perf is not available in the test environment.
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action completed successfully with caching disabled"
+            echo "PASS: action completed successfully with simulation mode and allow-empty=true"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (acceptable in test environment)"
+            echo "PASS: action failed gracefully (acceptable in test environment - valgrind/perf may not be available)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

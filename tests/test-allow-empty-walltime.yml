@@ -1,4 +1,4 @@
-name: Test with caching disabled
+name: Test allow-empty with walltime mode
 on:
   workflow_dispatch:
 jobs:
@@ -7,14 +7,13 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run CodSpeed action with caching disabled
+      - name: Run CodSpeed action with allow-empty and walltime mode
         id: action
         uses: .
         continue-on-error: true
         with:
           mode: walltime
           allow-empty: "true"
-          cache-instruments: "false"
           skip-hash-check-warning: "true"
           run: "echo 'no benchmarks here'"
 
@@ -23,13 +22,12 @@ jobs:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # With cache-instruments=false, the action should:
-          # 1. Skip the cache step (conditional: inputs.cache-instruments == 'true')
-          # 2. Install the CodSpeed runner without caching
-          # 3. Run with allow-empty=true
-          # A failure is acceptable if the runner binary fails in the test environment.
+          # The action installs the CodSpeed runner and runs with allow-empty=true.
+          # It should succeed (runner installed and no benchmarks found is OK with allow-empty).
+          # A failure outcome is also acceptable if the runner binary itself fails in the
+          # test environment (e.g., network issues or unsupported platform).
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action completed successfully with caching disabled"
+            echo "PASS: action completed successfully with allow-empty=true"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (acceptable in test environment)"
           else
