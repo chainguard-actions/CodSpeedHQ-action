@@ -1,4 +1,4 @@
-name: Test go-runner-version input
+name: Test config input
 on:
   workflow_dispatch:
 jobs:
@@ -52,10 +52,17 @@ jobs:
             'esac' > /tmp/fake-bin/curl
           chmod +x /tmp/fake-bin/curl
 
+          # Create a fake codspeed config file
+          mkdir -p /tmp/codspeed-config
+          printf '%s\n' \
+            'version: 1' \
+            'benchmarks:' \
+            '  - name: example' > /tmp/codspeed-config/codspeed.yml
+
           echo "/tmp/fake-bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run CodSpeed action with go-runner-version
+      - name: Run CodSpeed action with config file
         id: action
         uses: .
         with:
@@ -64,23 +71,19 @@ jobs:
           allow-empty: "true"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
-          go-runner-version: "1.0.0"
+          config: "/tmp/codspeed-config/codspeed.yml"
 
-      - name: Assert action completed and go-runner-version was passed
+      - name: Assert action completed and config was passed
         run: |
-          echo "Checking codspeed was called with go-runner-version..."
+          echo "Checking codspeed was called with config..."
           if [ ! -f /tmp/codspeed-args.txt ]; then
             echo "FAIL: codspeed was not called"
             exit 1
           fi
           ARGS=$(cat /tmp/codspeed-args.txt)
           echo "args: $ARGS"
-          if ! echo "$ARGS" | grep -q "go-runner-version"; then
-            echo "FAIL: go-runner-version was not passed to codspeed runner"
+          if ! echo "$ARGS" | grep -q "codspeed.yml"; then
+            echo "FAIL: config path was not passed to codspeed runner"
             exit 1
           fi
-          if ! echo "$ARGS" | grep -q "1.0.0"; then
-            echo "FAIL: go-runner-version value '1.0.0' was not passed to codspeed runner"
-            exit 1
-          fi
-          echo "PASS: go-runner-version was correctly passed to the runner"
+          echo "PASS: config was correctly passed to the runner"

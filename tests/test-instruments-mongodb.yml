@@ -1,4 +1,4 @@
-name: Test go-runner-version input
+name: Test instruments and mongo-uri-env-name inputs
 on:
   workflow_dispatch:
 jobs:
@@ -55,7 +55,7 @@ jobs:
           echo "/tmp/fake-bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run CodSpeed action with go-runner-version
+      - name: Run CodSpeed action with instruments and mongo-uri-env-name
         id: action
         uses: .
         with:
@@ -64,23 +64,24 @@ jobs:
           allow-empty: "true"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
-          go-runner-version: "1.0.0"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
 
-      - name: Assert action completed and go-runner-version was passed
+      - name: Assert action completed and instruments/mongo-uri-env-name were passed
         run: |
-          echo "Checking codspeed was called with go-runner-version..."
+          echo "Checking codspeed was called with instruments and mongo-uri-env-name..."
           if [ ! -f /tmp/codspeed-args.txt ]; then
             echo "FAIL: codspeed was not called"
             exit 1
           fi
           ARGS=$(cat /tmp/codspeed-args.txt)
           echo "args: $ARGS"
-          if ! echo "$ARGS" | grep -q "go-runner-version"; then
-            echo "FAIL: go-runner-version was not passed to codspeed runner"
+          if ! echo "$ARGS" | grep -q "mongodb"; then
+            echo "FAIL: instruments=mongodb was not passed to codspeed runner"
             exit 1
           fi
-          if ! echo "$ARGS" | grep -q "1.0.0"; then
-            echo "FAIL: go-runner-version value '1.0.0' was not passed to codspeed runner"
+          if ! echo "$ARGS" | grep -q "MONGODB_URI"; then
+            echo "FAIL: mongo-uri-env-name was not passed to codspeed runner"
             exit 1
           fi
-          echo "PASS: go-runner-version was correctly passed to the runner"
+          echo "PASS: instruments and mongo-uri-env-name were correctly passed to the runner"
