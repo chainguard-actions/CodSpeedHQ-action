@@ -123,16 +123,16 @@ runs:
         fi
 
         safe_runner_version=$(printf '%s' "$RUNNER_VERSION" | tr -d '\n\r')
-        echo "runner-version=$safe_runner_version" >> "$GITHUB_OUTPUT"
-        echo "version-type=$VERSION_TYPE" >> "$GITHUB_OUTPUT"
+        echo "runner-version=$safe_runner_version" >> $GITHUB_OUTPUT
+        echo "version-type=$VERSION_TYPE" >> $GITHUB_OUTPUT
 
         # Get kernel version for cache key
         KERNEL_VERSION=$(uname -r)
-        echo "kernel-version=$KERNEL_VERSION" >> "$GITHUB_OUTPUT"
+        echo "kernel-version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
 
         # Normalize mode for cache key (commas are not allowed in cache keys)
-        MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr -d '\n\r' | tr ',' '-')
-        echo "mode-cache-key=$MODE_CACHE_KEY" >> "$GITHUB_OUTPUT"
+        MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr ',' '-' | tr -d '\n\r')
+        echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT
     - name: Cache CodSpeed instruments
       if: inputs.cache-instruments == 'true'
       uses: chainguard-actions/actions-cache@9795b39c6b8efcf95b9e7b38308822eb2fa7ea67 # v5.0.4
@@ -163,10 +163,10 @@ runs:
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
           fi
-          LATEST_INSTALLER_TMP=$(mktemp)
-          trap "rm -f $LATEST_INSTALLER_TMP" EXIT
-          curl -fsSL https://codspeed.io/install.sh -o "$LATEST_INSTALLER_TMP"
-          bash "$LATEST_INSTALLER_TMP" --quiet
+          INSTALL_SCRIPT=$(mktemp)
+          trap "rm -f $INSTALL_SCRIPT" EXIT
+          curl -fsSL https://codspeed.io/install.sh -o "$INSTALL_SCRIPT"
+          bash "$INSTALL_SCRIPT" --quiet
         elif [ "$VERSION_TYPE" = "branch" ]; then
           # Install from specific branch using cargo
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
