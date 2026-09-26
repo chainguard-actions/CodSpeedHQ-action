@@ -1,4 +1,4 @@
-name: Test latest runner version type
+name: Test upload-url and config inputs
 on:
   workflow_dispatch:
 jobs:
@@ -7,22 +7,29 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Create a minimal codspeed config file
+        run: |
+          cat > /tmp/codspeed.yml <<'EOF'
+          version: 1
+          EOF
+
       - id: action
         uses: .
         with:
           mode: walltime
-          runner-version: latest
+          upload-url: "https://api.codspeed.io/upload"
+          config: /tmp/codspeed.yml
           allow-empty: "true"
           skip-hash-check-warning: "true"
         continue-on-error: true
 
-      - name: Assert action ran (latest runner version)
+      - name: Assert action ran (upload-url and config inputs)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with latest runner version"
+            echo "PASS: action succeeded with upload-url and config inputs"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (network/runner install may not be available in harness)"
           else

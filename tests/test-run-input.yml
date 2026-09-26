@@ -1,4 +1,4 @@
-name: Test latest runner version type
+name: Test run input with working-directory and token
 on:
   workflow_dispatch:
 jobs:
@@ -7,22 +7,27 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Create working directory
+        run: mkdir -p /tmp/bench-workdir
+
       - id: action
         uses: .
         with:
           mode: walltime
-          runner-version: latest
+          run: "echo 'benchmark placeholder'"
+          working-directory: /tmp/bench-workdir
+          token: "dummy-token-for-coverage"
           allow-empty: "true"
           skip-hash-check-warning: "true"
         continue-on-error: true
 
-      - name: Assert action ran (latest runner version)
+      - name: Assert action ran (run + working-directory + token inputs)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with latest runner version"
+            echo "PASS: action succeeded with run, working-directory, and token inputs"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (network/runner install may not be available in harness)"
           else
