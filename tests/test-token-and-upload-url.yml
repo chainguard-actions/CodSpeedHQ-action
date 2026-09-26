@@ -8,21 +8,19 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: action
         uses: .
-        continue-on-error: true
         with:
-          mode: "walltime"
-          token: "fake-codspeed-token"
-          upload-url: "https://api.codspeed.io"
+          mode: simulation
+          token: fake-codspeed-token
+          upload-url: https://api.codspeed.io/upload
           allow-empty: "true"
-          skip-hash-check-warning: "true"
-          runner-version: "latest"
+        continue-on-error: true
       - name: Assert action ran (token and upload-url inputs accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with token and upload-url inputs"
+            echo "PASS: action completed successfully with token and upload-url inputs"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (expected in harness environment without real CodSpeed setup)"
           else

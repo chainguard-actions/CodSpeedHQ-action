@@ -122,19 +122,18 @@ runs:
           VERSION_TYPE="release"
         fi
 
-        safe_runner_version=$(printf '%s' "$RUNNER_VERSION" | tr -d '\n\r')
-        safe_version_type=$(printf '%s' "$VERSION_TYPE" | tr -d '\n\r')
-        echo "runner-version=$safe_runner_version" >> "$GITHUB_OUTPUT"
-        echo "version-type=$safe_version_type" >> "$GITHUB_OUTPUT"
+        SAFE_RUNNER_VERSION=$(printf '%s' "$RUNNER_VERSION" | tr -d '\n\r')
+        echo "runner-version=$SAFE_RUNNER_VERSION" >> $GITHUB_OUTPUT
+        SAFE_VERSION_TYPE=$(printf '%s' "$VERSION_TYPE" | tr -d '\n\r')
+        echo "version-type=$SAFE_VERSION_TYPE" >> $GITHUB_OUTPUT
 
         # Get kernel version for cache key
         KERNEL_VERSION=$(uname -r)
-        safe_kernel_version=$(printf '%s' "$KERNEL_VERSION" | tr -d '\n\r')
-        echo "kernel-version=$safe_kernel_version" >> "$GITHUB_OUTPUT"
+        echo "kernel-version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
 
         # Normalize mode for cache key (commas are not allowed in cache keys)
         MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr ',' '-' | tr -d '\n\r')
-        echo "mode-cache-key=$MODE_CACHE_KEY" >> "$GITHUB_OUTPUT"
+        echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT
     - name: Cache CodSpeed instruments
       if: inputs.cache-instruments == 'true'
       uses: chainguard-actions/actions-cache@9795b39c6b8efcf95b9e7b38308822eb2fa7ea67 # v5.0.4
@@ -165,10 +164,10 @@ runs:
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
           fi
-          INSTALL_SCRIPT=$(mktemp)
-          trap "rm -f $INSTALL_SCRIPT" EXIT
-          curl -fsSL https://codspeed.io/install.sh -o "$INSTALL_SCRIPT"
-          bash "$INSTALL_SCRIPT" --quiet
+          INSTALLER_TMP=$(mktemp)
+          trap "rm -f $INSTALLER_TMP" EXIT
+          curl -fsSL https://codspeed.io/install.sh -o "$INSTALLER_TMP"
+          bash "$INSTALLER_TMP" --quiet
         elif [ "$VERSION_TYPE" = "branch" ]; then
           # Install from specific branch using cargo
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then

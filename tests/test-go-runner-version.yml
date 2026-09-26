@@ -8,20 +8,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: action
         uses: .
-        continue-on-error: true
         with:
-          mode: "walltime"
+          mode: simulation
           go-runner-version: "1.0.0"
           allow-empty: "true"
-          skip-hash-check-warning: "true"
-          runner-version: "latest"
+        continue-on-error: true
       - name: Assert action ran (go-runner-version input accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with go-runner-version input"
+            echo "PASS: action completed successfully with go-runner-version input"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (expected in harness environment without real CodSpeed setup)"
           else
