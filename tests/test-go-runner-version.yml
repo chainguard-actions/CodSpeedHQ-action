@@ -10,11 +10,12 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          mode: simulation
+          mode: "walltime"
           go-runner-version: "1.0.0"
           allow-empty: "true"
           skip-hash-check-warning: "true"
-      - name: Assert action ran with go-runner-version input
+          runner-version: "latest"
+      - name: Assert action ran (go-runner-version input accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
