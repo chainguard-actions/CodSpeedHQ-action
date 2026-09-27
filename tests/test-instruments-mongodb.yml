@@ -1,4 +1,4 @@
-name: Test go-runner-version input
+name: Test instruments and mongo-uri-env-name inputs
 on:
   workflow_dispatch:
 jobs:
@@ -32,23 +32,30 @@ jobs:
       - id: action
         uses: .
         with:
-          mode: walltime
+          mode: simulation
           run: "echo 'no benchmarks here'"
           runner-version: "latest"
           allow-empty: "true"
           skip-hash-check-warning: "true"
-          go-runner-version: "1.0.0"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
 
-      - name: Assert action completed with go-runner-version
+      - name: Assert action completed with instruments and mongo-uri-env-name
         run: |
-          echo "PASS: action completed with go-runner-version input set"
+          echo "PASS: action completed with instruments and mongo-uri-env-name inputs set"
           if [ -f /tmp/codspeed-args.txt ]; then
             echo "Runner args:"
             cat /tmp/codspeed-args.txt
-            if grep -q "1.0.0" /tmp/codspeed-args.txt; then
-              echo "PASS: go-runner-version was passed to runner"
+            if grep -q "mongodb" /tmp/codspeed-args.txt; then
+              echo "PASS: instruments was passed to runner"
             else
-              echo "FAIL: go-runner-version was not passed to runner"
+              echo "FAIL: instruments was not passed to runner"
+              exit 1
+            fi
+            if grep -q "MONGODB_URI" /tmp/codspeed-args.txt; then
+              echo "PASS: mongo-uri-env-name was passed to runner"
+            else
+              echo "FAIL: mongo-uri-env-name was not passed to runner"
               exit 1
             fi
           fi
