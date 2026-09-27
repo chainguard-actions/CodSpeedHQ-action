@@ -1,4 +1,4 @@
-name: Test token and upload-url inputs
+name: Test go-runner-version and config inputs
 on:
   workflow_dispatch:
 jobs:
@@ -54,7 +54,11 @@ jobs:
           echo "/tmp/fake-bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run CodSpeed action with token and upload-url
+          # Create a minimal codspeed config file for the test
+          mkdir -p /tmp/codspeed-config
+          printf '%s\n' 'version: 1' > /tmp/codspeed-config/codspeed.yml
+
+      - name: Run CodSpeed action with go-runner-version and config
         id: action
         uses: .
         with:
@@ -63,9 +67,9 @@ jobs:
           allow-empty: "true"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
-          token: "test-codspeed-token-12345"
-          upload-url: "https://api.codspeed.io/upload"
+          go-runner-version: "1.0.0"
+          config: "/tmp/codspeed-config/codspeed.yml"
 
       - name: Assert action completed successfully
         run: |
-          echo "PASS: CodSpeed action completed with token and upload-url inputs"
+          echo "PASS: CodSpeed action completed with go-runner-version and config inputs"
