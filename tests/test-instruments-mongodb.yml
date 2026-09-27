@@ -1,4 +1,4 @@
-name: Test config input
+name: Test instruments and mongo-uri-env-name inputs
 on:
   workflow_dispatch:
 jobs:
@@ -11,7 +11,8 @@ jobs:
         uses: .
         with:
           mode: walltime
-          config: "${{ github.workspace }}/hardened/tests/fixtures/codspeed.yml"
+          instruments: mongodb
+          mongo-uri-env-name: MONGODB_URI
           allow-empty: "true"
           skip-hash-check-warning: "true"
         continue-on-error: true
@@ -22,7 +23,7 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action completed successfully with config input set"
+            echo "PASS: action completed successfully with instruments=mongodb and mongo-uri-env-name set"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (network/install issue acceptable in harness)"
           else
