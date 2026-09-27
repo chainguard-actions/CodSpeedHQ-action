@@ -1,4 +1,4 @@
-name: Test go-runner-version input
+name: Test instruments and mongo-uri-env-name inputs
 on:
   workflow_dispatch:
 jobs:
@@ -11,9 +11,10 @@ jobs:
         with:
           mode: simulation
           allow-empty: "true"
-          go-runner-version: "1.0.0"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
           skip-hash-check-warning: "true"
           runner-version: "latest"
       - name: Assert action completed
         run: |
-          echo "PASS: action completed with go-runner-version input"
+          echo "PASS: action completed with instruments and mongo-uri-env-name inputs"
