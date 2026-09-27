@@ -125,16 +125,19 @@ runs:
         fi
 
         safe_runner_version=$(printf '%s' "$RUNNER_VERSION" | tr -d '\n\r')
-        echo "runner-version=$safe_runner_version" >> $GITHUB_OUTPUT
-        echo "version-type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+        echo "runner-version=$safe_runner_version" >> "$GITHUB_OUTPUT"
+        safe_version_type=$(printf '%s' "$VERSION_TYPE" | tr -d '\n\r')
+        echo "version-type=$safe_version_type" >> "$GITHUB_OUTPUT"
 
         # Get kernel version for cache key
         KERNEL_VERSION=$(uname -r)
-        echo "kernel-version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
+        safe_kernel_version=$(printf '%s' "$KERNEL_VERSION" | tr -d '\n\r')
+        echo "kernel-version=$safe_kernel_version" >> "$GITHUB_OUTPUT"
 
         # Normalize mode for cache key (commas are not allowed in cache keys)
-        MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr ',' '-' | tr -d '\n\r')
-        echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT
+        MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr ',' '-')
+        safe_mode_cache_key=$(printf '%s' "$MODE_CACHE_KEY" | tr -d '\n\r')
+        echo "mode-cache-key=$safe_mode_cache_key" >> "$GITHUB_OUTPUT"
     - name: Cache CodSpeed instruments
       if: inputs.cache-instruments == 'true'
       uses: chainguard-actions/actions-cache@9795b39c6b8efcf95b9e7b38308822eb2fa7ea67 # v5.0.4
@@ -156,33 +159,28 @@ runs:
     - name: Install CodSpeed runner
       shell: bash
       env:
-        INPUT_RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
-        INPUT_VERSION_TYPE: ${{ steps.versions.outputs.version-type }}
-        INPUT_SKIP_HASH_CHECK_WARNING: ${{ inputs.skip-hash-check-warning }}
-        INPUT_EXPECTED_HASH: ${{ steps.installer-hash.outputs.hash }}
+        RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
+        VERSION_TYPE: ${{ steps.versions.outputs.version-type }}
+        SKIP_HASH_CHECK_WARNING: ${{ inputs.skip-hash-check-warning }}
+        EXPECTED_HASH: ${{ steps.installer-hash.outputs.hash }}
       run: |
-        RUNNER_VERSION="$INPUT_RUNNER_VERSION"
-        VERSION_TYPE="$INPUT_VERSION_TYPE"
-
-        SKIP_HASH_CHECK_WARNING="$INPUT_SKIP_HASH_CHECK_WARNING"
-
         if [ "$VERSION_TYPE" = "latest" ]; then
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
           fi
-          INSTALLER_TMP=$(mktemp)
-          trap "rm -f $INSTALLER_TMP" EXIT
-          curl -fsSL https://codspeed.io/install.sh -o "$INSTALLER_TMP"
-          bash "$INSTALLER_TMP" --quiet
+          INSTALL_SCRIPT=$(mktemp)
+          trap "rm -f $INSTALL_SCRIPT" EXIT
+          curl -fsSL https://codspeed.io/install.sh -o "$INSTALL_SCRIPT"
+          bash "$INSTALL_SCRIPT" --quiet
         elif [ "$VERSION_TYPE" = "prerelease" ]; then
           # Prereleases are not pinned, so install from the versioned installer without hash verification.
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available for prerelease version $RUNNER_VERSION."
           fi
-          INSTALLER_TMP=$(mktemp)
-          trap "rm -f $INSTALLER_TMP" EXIT
-          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALLER_TMP"
-          bash "$INSTALLER_TMP" --quiet
+          INSTALL_SCRIPT=$(mktemp)
+          trap "rm -f $INSTALL_SCRIPT" EXIT
+          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALL_SCRIPT"
+          bash "$INSTALL_SCRIPT" --quiet
         elif [ "$VERSION_TYPE" = "branch" ]; then
           # Install from specific branch using cargo
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
@@ -214,7 +212,6 @@ runs:
             exit 1
           fi
 
-          EXPECTED_HASH="$INPUT_EXPECTED_HASH"
           if [ -z "$EXPECTED_HASH" ]; then
             echo "::error::No pinned hash found for installer version $RUNNER_VERSION. Update .codspeed-runner-installer-hashes.json."
             exit 1
