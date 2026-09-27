@@ -1,4 +1,4 @@
-name: Test go-runner-version input
+name: Test run, token, and upload-url inputs
 on:
   workflow_dispatch:
 jobs:
@@ -9,8 +9,10 @@ jobs:
       - id: action
         uses: .
         with:
+          run: "echo 'benchmark placeholder'"
           mode: simulation
-          go-runner-version: "1.0.0"
+          token: "dummy-token-for-coverage"
+          upload-url: "https://api.codspeed.io"
           runner-version: latest
           skip-hash-check-warning: "true"
           allow-empty: "true"
