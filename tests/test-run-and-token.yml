@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test run command and token inputs
 on:
   workflow_dispatch:
 jobs:
@@ -14,21 +14,21 @@ jobs:
           chmod +x "$HOME/.local/bin/curl"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run CodSpeed action with instruments and mongo-uri-env-name
+      - name: Run CodSpeed action with run command and token
         id: action
         uses: .
         with:
           mode: "walltime"
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          run: "echo hello-benchmark"
+          token: "fake-codspeed-token-for-testing"
           allow-empty: "true"
           runner-version: "latest"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
 
-      - name: Assert action completed successfully with instruments inputs
+      - name: Assert action completed successfully with run and token inputs
         run: |
-          echo "Action completed successfully with instruments and mongo-uri-env-name inputs"
+          echo "Action completed successfully with run and token inputs"
           if ! command -v codspeed &>/dev/null; then
             echo "FAIL: codspeed binary not found after installation"
             exit 1

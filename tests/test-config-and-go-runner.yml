@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test config and go-runner-version inputs
 on:
   workflow_dispatch:
 jobs:
@@ -13,22 +13,27 @@ jobs:
           cp "$GITHUB_WORKSPACE/tests/fixtures/fake-curl" "$HOME/.local/bin/curl"
           chmod +x "$HOME/.local/bin/curl"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # Create a minimal CodSpeed config file for testing
+          mkdir -p /tmp/codspeed-config-test
+          cat > /tmp/codspeed-config-test/codspeed.yml <<'EOF'
+# Minimal CodSpeed configuration for testing
+EOF
 
-      - name: Run CodSpeed action with instruments and mongo-uri-env-name
+      - name: Run CodSpeed action with config and go-runner-version
         id: action
         uses: .
         with:
           mode: "walltime"
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          config: "/tmp/codspeed-config-test/codspeed.yml"
+          go-runner-version: "1.0.0"
           allow-empty: "true"
           runner-version: "latest"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
 
-      - name: Assert action completed successfully with instruments inputs
+      - name: Assert action completed successfully with config and go-runner-version inputs
         run: |
-          echo "Action completed successfully with instruments and mongo-uri-env-name inputs"
+          echo "Action completed successfully with config and go-runner-version inputs"
           if ! command -v codspeed &>/dev/null; then
             echo "FAIL: codspeed binary not found after installation"
             exit 1
