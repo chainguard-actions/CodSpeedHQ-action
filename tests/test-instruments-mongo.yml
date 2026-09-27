@@ -8,22 +8,22 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: action
         uses: .
-        continue-on-error: true
         with:
           mode: simulation
+          instruments: mongodb
+          mongo-uri-env-name: MONGODB_URI
           allow-empty: "true"
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
           skip-hash-check-warning: "true"
-      - name: Assert action ran (inputs accepted)
+        continue-on-error: true
+      - name: Assert action ran (completed or failed gracefully)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with instruments and mongo-uri-env-name inputs"
+            echo "PASS: action completed successfully with instruments/mongo-uri-env-name inputs"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected — mongodb instrument may not be available)"
+            echo "PASS: action failed gracefully (expected in harness environment without MongoDB)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
