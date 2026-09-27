@@ -6,30 +6,78 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Create a CodSpeed config file
+
+      - name: Set up fake codspeed binary, mock curl, and config file
         run: |
-          cat > /tmp/codspeed.yml << 'EOF'
+          # Create a fake codspeed binary that records its arguments
+          sudo tee /usr/local/bin/codspeed > /dev/null << 'EOF'
+          #!/bin/sh
+          echo "fake codspeed called with: $*"
+          # Write args to a file for assertion
+          echo "$*" > /tmp/codspeed-args.txt
+          exit 0
+          EOF
+          sudo chmod +x /usr/local/bin/codspeed
+
+          # Create a fake installer script
+          sudo tee /tmp/fake-codspeed-install.sh > /dev/null << 'EOF'
+          #!/bin/sh
+          echo "fake installer: codspeed already installed"
+          exit 0
+          EOF
+          sudo chmod +x /tmp/fake-codspeed-install.sh
+
+          # Create a fake curl that serves the fake installer
+          sudo tee /usr/local/bin/curl > /dev/null << 'CURLEOF'
+          #!/bin/sh
+          out=""
+          prev=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *codspeed*|*install*)
+              if [ -n "$out" ]; then
+                cat /tmp/fake-codspeed-install.sh > "$out"
+              else
+                cat /tmp/fake-codspeed-install.sh
+              fi
+              exit 0
+              ;;
+          esac
+          exec /usr/bin/curl "$@"
+          CURLEOF
+          sudo chmod +x /usr/local/bin/curl
+
+          # Create a fake CodSpeed config file
+          mkdir -p /tmp/codspeed-config
+          cat > /tmp/codspeed-config/codspeed.yml << 'CONFIGEOF'
+          # CodSpeed configuration
           benchmarks:
             - name: example
-          EOF
+          CONFIGEOF
+
       - id: action
         uses: .
-        continue-on-error: true
         with:
           mode: simulation
-          config: /tmp/codspeed.yml
+          config: "/tmp/codspeed-config/codspeed.yml"
+          run: "echo 'no benchmarks here'"
           allow-empty: "true"
+          runner-version: "latest"
           skip-hash-check-warning: "true"
-      - name: Assert action ran (config input accepted)
-        env:
-          OUTCOME: ${{ steps.action.outcome }}
+
+      - name: Assert config was passed to codspeed
         run: |
-          echo "outcome: $OUTCOME"
-          if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with config input"
-          elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected when no benchmarks found)"
+          ARGS=$(cat /tmp/codspeed-args.txt 2>/dev/null || echo "")
+          echo "codspeed args: $ARGS"
+          if echo "$ARGS" | grep -q -- "--config"; then
+            echo "PASS: --config argument found"
           else
-            echo "FAIL: unexpected outcome '$OUTCOME'"
+            echo "FAIL: --config argument not found in codspeed args"
             exit 1
           fi
+          echo "PASS: config was passed correctly"

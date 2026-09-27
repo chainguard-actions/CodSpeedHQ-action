@@ -56,31 +56,27 @@ jobs:
         uses: .
         with:
           mode: simulation
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
           run: "echo 'no benchmarks here'"
           allow-empty: "true"
           runner-version: "latest"
           skip-hash-check-warning: "true"
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
 
-      - name: Assert action completed and instruments/mongo-uri-env-name were passed
+      - name: Assert instruments and mongo-uri-env-name were passed to codspeed
         run: |
-          echo "Checking codspeed was called with instruments and mongo-uri-env-name args..."
-          if [ ! -f /tmp/codspeed-args.txt ]; then
-            echo "FAIL: codspeed was not called"
-            exit 1
-          fi
-          ARGS=$(cat /tmp/codspeed-args.txt)
+          ARGS=$(cat /tmp/codspeed-args.txt 2>/dev/null || echo "")
           echo "codspeed args: $ARGS"
           if echo "$ARGS" | grep -q -- "--instruments"; then
-            echo "PASS: --instruments argument was passed"
+            echo "PASS: --instruments argument found"
           else
-            echo "FAIL: --instruments argument was not passed to codspeed"
+            echo "FAIL: --instruments argument not found in codspeed args"
             exit 1
           fi
           if echo "$ARGS" | grep -q -- "--mongo-uri-env-name"; then
-            echo "PASS: --mongo-uri-env-name argument was passed"
+            echo "PASS: --mongo-uri-env-name argument found"
           else
-            echo "FAIL: --mongo-uri-env-name argument was not passed to codspeed"
+            echo "FAIL: --mongo-uri-env-name argument not found in codspeed args"
             exit 1
           fi
+          echo "PASS: both instruments and mongo-uri-env-name were passed correctly"
