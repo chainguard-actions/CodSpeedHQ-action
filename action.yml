@@ -156,33 +156,28 @@ runs:
     - name: Install CodSpeed runner
       shell: bash
       env:
-        INPUT_SKIP_HASH_CHECK_WARNING: ${{ inputs.skip-hash-check-warning }}
         RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
         VERSION_TYPE: ${{ steps.versions.outputs.version-type }}
+        SKIP_HASH_CHECK_WARNING: ${{ inputs.skip-hash-check-warning }}
         EXPECTED_HASH: ${{ steps.installer-hash.outputs.hash }}
       run: |
-        RUNNER_VERSION="$RUNNER_VERSION"
-        VERSION_TYPE="$VERSION_TYPE"
-
-        SKIP_HASH_CHECK_WARNING="$INPUT_SKIP_HASH_CHECK_WARNING"
-
         if [ "$VERSION_TYPE" = "latest" ]; then
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
           fi
-          INSTALL_SCRIPT_LATEST=$(mktemp)
-          trap "rm -f $INSTALL_SCRIPT_LATEST" EXIT
-          curl -fsSL https://codspeed.io/install.sh -o "$INSTALL_SCRIPT_LATEST"
-          bash "$INSTALL_SCRIPT_LATEST" --quiet
+          INSTALLER_TMP=$(mktemp)
+          trap "rm -f $INSTALLER_TMP" EXIT
+          curl -fsSL https://codspeed.io/install.sh -o "$INSTALLER_TMP"
+          bash "$INSTALLER_TMP" --quiet
         elif [ "$VERSION_TYPE" = "prerelease" ]; then
           # Prereleases are not pinned, so install from the versioned installer without hash verification.
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available for prerelease version $RUNNER_VERSION."
           fi
-          INSTALL_SCRIPT_PRE=$(mktemp)
-          trap "rm -f $INSTALL_SCRIPT_PRE" EXIT
-          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALL_SCRIPT_PRE"
-          bash "$INSTALL_SCRIPT_PRE" --quiet
+          INSTALLER_TMP=$(mktemp)
+          trap "rm -f $INSTALLER_TMP" EXIT
+          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALLER_TMP"
+          bash "$INSTALLER_TMP" --quiet
         elif [ "$VERSION_TYPE" = "branch" ]; then
           # Install from specific branch using cargo
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
