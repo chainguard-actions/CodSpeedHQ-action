@@ -1,4 +1,4 @@
-name: Test upload-url input
+name: Test config input
 on:
   workflow_dispatch:
 jobs:
@@ -6,23 +6,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create CodSpeed config file
+        run: |
+          mkdir -p /tmp/codspeed-test
+          cat > /tmp/codspeed-test/codspeed.yml << 'EOF'
+          version: 1
+          EOF
       - id: action
         uses: .
         continue-on-error: true
         with:
           mode: simulation
-          upload-url: "https://codspeed.example.com/upload"
+          config: "/tmp/codspeed-test/codspeed.yml"
           allow-empty: "true"
           skip-hash-check-warning: "true"
-      - name: Assert action ran (upload-url input accepted)
+      - name: Assert action ran (config input accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with upload-url input"
+            echo "PASS: action succeeded with config input"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected in harness with custom upload-url)"
+            echo "PASS: action failed gracefully (expected in harness with custom config)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

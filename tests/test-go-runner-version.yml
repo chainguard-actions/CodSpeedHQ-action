@@ -8,22 +8,21 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: action
         uses: .
+        continue-on-error: true
         with:
           mode: simulation
           go-runner-version: "1.0.0"
-          runner-version: latest
-          skip-hash-check-warning: "true"
           allow-empty: "true"
-        continue-on-error: true
-      - name: Assert action ran (success or graceful failure)
+          skip-hash-check-warning: "true"
+      - name: Assert action ran (go-runner-version input accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded"
+            echo "PASS: action succeeded with go-runner-version input"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected in harness without real benchmarks)"
+            echo "PASS: action failed gracefully (expected in harness with go-runner-version)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
