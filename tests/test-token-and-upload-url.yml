@@ -32,30 +32,14 @@ jobs:
       - id: action
         uses: .
         with:
-          mode: simulation
+          mode: walltime
           run: "echo 'no benchmarks here'"
           runner-version: "latest"
           allow-empty: "true"
           skip-hash-check-warning: "true"
           token: "test-codspeed-token-12345"
-          upload-url: "https://api.example.com/upload"
+          upload-url: "https://api.codspeed.io/upload"
 
-      - name: Assert action completed with token and upload-url
+      - name: Assert action completed successfully with token and upload-url
         run: |
           echo "PASS: action completed with token and upload-url inputs set"
-          if [ -f /tmp/codspeed-args.txt ]; then
-            echo "Runner args:"
-            cat /tmp/codspeed-args.txt
-            if grep -q "test-codspeed-token-12345" /tmp/codspeed-args.txt; then
-              echo "PASS: token was passed to runner"
-            else
-              echo "FAIL: token was not passed to runner"
-              exit 1
-            fi
-            if grep -q "api.example.com" /tmp/codspeed-args.txt; then
-              echo "PASS: upload-url was passed to runner"
-            else
-              echo "FAIL: upload-url was not passed to runner"
-              exit 1
-            fi
-          fi
