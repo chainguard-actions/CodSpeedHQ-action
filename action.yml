@@ -165,19 +165,19 @@ runs:
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
           fi
-          INSTALLER_TMP=$(mktemp)
-          trap "rm -f $INSTALLER_TMP" EXIT
-          curl -fsSL https://codspeed.io/install.sh -o "$INSTALLER_TMP"
-          bash "$INSTALLER_TMP" --quiet
+          INSTALL_SCRIPT=$(mktemp)
+          trap "rm -f $INSTALL_SCRIPT" EXIT
+          curl -fsSL https://codspeed.io/install.sh -o "$INSTALL_SCRIPT"
+          bash "$INSTALL_SCRIPT" --quiet
         elif [ "$VERSION_TYPE" = "prerelease" ]; then
           # Prereleases are not pinned, so install from the versioned installer without hash verification.
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available for prerelease version $RUNNER_VERSION."
           fi
-          INSTALLER_TMP=$(mktemp)
-          trap "rm -f $INSTALLER_TMP" EXIT
-          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALLER_TMP"
-          bash "$INSTALLER_TMP" --quiet
+          INSTALL_SCRIPT=$(mktemp)
+          trap "rm -f $INSTALL_SCRIPT" EXIT
+          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALL_SCRIPT"
+          bash "$INSTALL_SCRIPT" --quiet
         elif [ "$VERSION_TYPE" = "branch" ]; then
           # Install from specific branch using cargo
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
