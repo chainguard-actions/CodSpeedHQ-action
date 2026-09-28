@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test run with working-directory and token inputs
 on:
   workflow_dispatch:
 jobs:
@@ -11,8 +11,9 @@ jobs:
         continue-on-error: true
         with:
           mode: walltime
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          run: "echo 'benchmark'"
+          working-directory: "/tmp"
+          token: "fake-codspeed-token"
           allow-empty: "true"
           skip-hash-check-warning: "true"
       - name: Assert action ran (may fail due to missing CodSpeed runner in test env)
