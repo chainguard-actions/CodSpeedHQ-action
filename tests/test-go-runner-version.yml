@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test go-runner-version input
 on:
   workflow_dispatch:
 jobs:
@@ -11,8 +11,7 @@ jobs:
         continue-on-error: true
         with:
           mode: simulation
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          go-runner-version: "1.0.0"
           allow-empty: "true"
           skip-hash-check-warning: "true"
           runner-version: "latest"
