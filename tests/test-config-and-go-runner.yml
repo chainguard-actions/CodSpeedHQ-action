@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test config and go-runner-version inputs
 on:
   workflow_dispatch:
 jobs:
@@ -14,13 +14,19 @@ jobs:
           chmod +x /tmp/fake-bin/curl
           echo "/tmp/fake-bin" >> $GITHUB_PATH
 
-      - name: Run CodSpeed action with instruments and mongo-uri-env-name inputs
+      - name: Create a minimal CodSpeed config file
+        run: |
+          cat > /tmp/codspeed.yml << 'EOF'
+          version: 1
+          EOF
+
+      - name: Run CodSpeed action with config and go-runner-version inputs
         id: action
         uses: .
         with:
           mode: "walltime"
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          config: "/tmp/codspeed.yml"
+          go-runner-version: "1.0.0"
           runner-version: "latest"
           allow-empty: "true"
           cache-instruments: "false"
@@ -28,4 +34,4 @@ jobs:
 
       - name: Assert action completed successfully
         run: |
-          echo "PASS: CodSpeed action completed with instruments and mongo-uri-env-name inputs"
+          echo "PASS: CodSpeed action completed with config and go-runner-version inputs"
