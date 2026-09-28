@@ -1,4 +1,4 @@
-name: Test config file input
+name: Test token and upload-url inputs
 on:
   workflow_dispatch:
 jobs:
@@ -6,13 +6,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Create CodSpeed config file
-        run: |
-          cat > /tmp/codspeed.yml << 'EOF'
-          benchmarks:
-            - name: example
-          EOF
 
       - id: action
         uses: .
@@ -23,7 +16,8 @@ jobs:
           runner-version: "latest"
           skip-hash-check-warning: "true"
           cache-instruments: "false"
-          config: "/tmp/codspeed.yml"
+          token: "fake-codspeed-token"
+          upload-url: "https://api.codspeed.io"
 
       - name: Assert action completed
         env:
@@ -31,7 +25,7 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           # The action may succeed or fail gracefully in the harness environment.
-          # The config input is passed through to the CodSpeed runner.
+          # We accept success or failure since the token/upload-url may not be valid.
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action completed with outcome '$OUTCOME'"
           else
