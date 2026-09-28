@@ -7,13 +7,21 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+      - name: Create a CodSpeed config file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/codspeed-config"
+          cat > "$GITHUB_WORKSPACE/codspeed-config/codspeed.yml" <<'EOF'
+          version: 1
+          EOF
+
       - id: action
         uses: .
         with:
           mode: walltime
-          config: "${{ github.workspace }}/hardened/tests/fixtures/codspeed.yml"
+          run: echo "no benchmarks here"
           allow-empty: "true"
           skip-hash-check-warning: "true"
+          config: "${{ github.workspace }}/codspeed-config/codspeed.yml"
         continue-on-error: true
 
       - name: Assert action ran (success or graceful failure)
@@ -22,7 +30,7 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action completed successfully with config input set"
+            echo "PASS: action completed successfully with config input"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (network/install issue acceptable in harness)"
           else

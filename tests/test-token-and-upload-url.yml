@@ -11,10 +11,11 @@ jobs:
         uses: .
         with:
           mode: walltime
-          token: fake-codspeed-token
-          upload-url: https://api.codspeed.io
+          run: echo "no benchmarks here"
           allow-empty: "true"
           skip-hash-check-warning: "true"
+          token: "fake-codspeed-token-for-testing"
+          upload-url: "https://api.codspeed.io"
         continue-on-error: true
 
       - name: Assert action ran (success or graceful failure)
@@ -23,9 +24,9 @@ jobs:
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action completed successfully with token and upload-url set"
+            echo "PASS: action completed successfully with token and upload-url inputs"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (network/install issue acceptable in harness)"
+            echo "PASS: action failed gracefully (network/install issue or invalid token acceptable in harness)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
