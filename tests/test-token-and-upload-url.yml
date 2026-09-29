@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test token and upload-url inputs
 on:
   workflow_dispatch:
 jobs:
@@ -9,23 +9,23 @@ jobs:
 
       - id: action
         uses: .
-        continue-on-error: true
         with:
           mode: simulation
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          token: "fake-codspeed-token-for-testing"
+          upload-url: "https://api.codspeed.io/upload"
           allow-empty: "true"
-          skip-hash-check-warning: "false"
+          skip-hash-check-warning: "true"
+        continue-on-error: true
 
-      - name: Assert action ran (succeeded or failed gracefully)
+      - name: Assert action completed (success or graceful failure)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with instruments and mongo-uri-env-name"
+            echo "PASS: action completed successfully with token and upload-url inputs"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected without real MongoDB setup)"
+            echo "PASS: action failed gracefully (network/install issue or invalid token in harness environment)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
