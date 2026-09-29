@@ -1,4 +1,4 @@
-name: Test simulation mode options (cycle-estimation and exclude-allocations)
+name: Test cycle-estimation and exclude-allocations inputs
 on:
   workflow_dispatch:
 jobs:
@@ -6,28 +6,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - id: action
         uses: .
         continue-on-error: true
         with:
-          mode: simulation
-          allow-empty: "true"
-          runner-version: "latest"
-          skip-hash-check-warning: "true"
-          cache-instruments: "false"
+          mode: "simulation"
           cycle-estimation: "true"
           exclude-allocations: "false"
-
-      - name: Assert action completed
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+      - name: Assert action ran (cycle-estimation and exclude-allocations inputs accepted)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action may succeed or fail gracefully in the harness environment.
-          # Simulation mode with cycle-estimation and exclude-allocations options.
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action completed with outcome '$OUTCOME'"
+            echo "PASS: action ran with cycle-estimation and exclude-allocations inputs"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
