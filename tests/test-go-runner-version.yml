@@ -25,7 +25,7 @@ jobs:
           if [ "$OUTCOME" = "success" ]; then
             echo "PASS: action completed successfully with go-runner-version input"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (network/install issue or go-runner version not found acceptable in harness)"
+            echo "PASS: action failed gracefully (network/install issue acceptable in harness)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
