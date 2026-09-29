@@ -16,7 +16,7 @@ jobs:
           skip-hash-check-warning: "true"
         continue-on-error: true
 
-      - name: Assert action ran (go-runner-version input)
+      - name: Assert action ran (go-runner-version input covered)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |

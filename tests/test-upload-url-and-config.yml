@@ -7,23 +7,24 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create a minimal codspeed config file
+      - name: Create a dummy CodSpeed config file
         run: |
-          cat > /tmp/codspeed.yml <<'EOF'
-          version: 1
+          mkdir -p /tmp/codspeed-config
+          cat > /tmp/codspeed-config/codspeed.yml <<'EOF'
+          # CodSpeed configuration
           EOF
 
       - id: action
         uses: .
         with:
           mode: walltime
-          upload-url: "https://api.codspeed.io/upload"
-          config: /tmp/codspeed.yml
+          upload-url: "https://api.example.com/upload"
+          config: "/tmp/codspeed-config/codspeed.yml"
           allow-empty: "true"
           skip-hash-check-warning: "true"
         continue-on-error: true
 
-      - name: Assert action ran (upload-url and config inputs)
+      - name: Assert action ran (upload-url and config inputs covered)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
