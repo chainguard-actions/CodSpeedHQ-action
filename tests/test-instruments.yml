@@ -15,13 +15,13 @@ jobs:
           mongo-uri-env-name: "MONGODB_URI"
           allow-empty: "true"
           skip-hash-check-warning: "true"
-      - name: Assert action ran (instruments inputs accepted)
+      - name: Assert action ran (inputs accepted, may fail on install/run)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action ran with instruments/mongo-uri-env-name inputs"
+            echo "PASS: action processed instruments inputs and completed with outcome '$OUTCOME'"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
