@@ -6,17 +6,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up fake curl to intercept CodSpeed installer download
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          cp "$GITHUB_WORKSPACE/hardened/tests/fixtures/fake-curl" "$HOME/.local/bin/curl"
+          chmod +x "$HOME/.local/bin/curl"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Run CodSpeed action with run, token, and upload-url inputs
         id: action
         uses: .
         with:
+          mode: "walltime"
           run: "echo 'benchmark placeholder'"
-          mode: walltime
-          token: "fake-codspeed-token"
+          token: "fake-codspeed-token-for-testing"
           upload-url: "https://api.codspeed.io/upload"
           allow-empty: "true"
-          skip-hash-check-warning: "true"
           runner-version: "latest"
-      - name: Assert action completed
+          cache-instruments: "false"
+          skip-hash-check-warning: "true"
+
+      - name: Assert action completed successfully
         run: |
-          echo "PASS: action completed with run, token, and upload-url inputs"
+          echo "Action completed successfully with run, token, and upload-url inputs"
+          if ! command -v codspeed &>/dev/null; then
+            echo "FAIL: codspeed binary not found after installation"
+            exit 1
+          fi
+          echo "PASS: codspeed binary found at $(command -v codspeed)"
