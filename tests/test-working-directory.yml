@@ -6,25 +6,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Create working directory
+
+      - name: Create a working directory for the benchmark run
         run: mkdir -p /tmp/bench-workdir
-      - id: action
+
+      - name: Run CodSpeed action with working-directory input
+        id: action
         uses: .
-        with:
-          mode: simulation
-          allow-empty: "true"
-          working-directory: "/tmp/bench-workdir"
-          skip-hash-check-warning: "true"
         continue-on-error: true
-      - name: Assert action ran with working-directory input
+        with:
+          mode: walltime
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+          working-directory: "/tmp/bench-workdir"
+          run: "echo 'no benchmarks here'"
+
+      - name: Assert action completed (success or graceful failure)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
+          # The action should install the CodSpeed runner and run the command
+          # in the specified working-directory. Success or graceful failure is acceptable.
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with working-directory input"
+            echo "PASS: action completed successfully with working-directory input"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected in harness environment without real CodSpeed setup)"
+            echo "PASS: action failed gracefully (acceptable in test environment)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

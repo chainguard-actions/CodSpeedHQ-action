@@ -4,24 +4,34 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+
+      - name: Run CodSpeed action with instruments and mongo-uri-env-name inputs
+        id: action
         uses: .
         continue-on-error: true
         with:
-          mode: simulation
-          instruments: mongodb
-          mongo-uri-env-name: MONGODB_URI
+          mode: walltime
           allow-empty: "true"
-          runner-version: latest
           skip-hash-check-warning: "true"
-      - name: Assert action ran (instruments and mongo-uri-env-name inputs accepted)
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
+          run: "echo 'no benchmarks here'"
+
+      - name: Assert action completed (success or graceful failure)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
         run: |
-          echo "outcome: ${{ steps.action.outcome }}"
-          # The action may fail at the benchmark run step (no benchmarks),
-          # but we verify the inputs were accepted by the action framework.
-          echo "PASS: instruments and mongo-uri-env-name inputs were accepted"
+          echo "outcome: $OUTCOME"
+          # The action should install the CodSpeed runner and attempt to run
+          # with MongoDB instrumentation. Failure is acceptable since MongoDB
+          # may not be available or the instrument may require org-level enablement.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with instruments and mongo-uri-env-name inputs"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (acceptable - MongoDB instrument may not be available)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
