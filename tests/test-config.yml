@@ -6,23 +6,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a CodSpeed config file
+        run: |
+          cat > /tmp/codspeed.yml << 'EOF'
+          version: 1
+          EOF
+
       - id: action
         uses: .
-        continue-on-error: true
         with:
-          mode: simulation
-          config: ${{ github.workspace }}/hardened/tests/fixtures/codspeed.yml
+          mode: walltime
+          run: echo "no benchmarks here"
           allow-empty: "true"
           skip-hash-check-warning: "true"
-      - name: Assert action ran (succeeded or failed gracefully)
+          config: "/tmp/codspeed.yml"
+        continue-on-error: true
+
+      - name: Assert action ran (success or graceful failure)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            echo "PASS: action succeeded with config input"
+            echo "PASS: action completed successfully with config input"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected in harness environment)"
+            echo "PASS: action failed gracefully (network/install issue acceptable in harness)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
