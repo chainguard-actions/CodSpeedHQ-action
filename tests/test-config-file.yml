@@ -8,20 +8,18 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Create a CodSpeed config file
         run: |
-          mkdir -p /tmp/codspeed-test
-          cat > /tmp/codspeed-test/codspeed.yml <<'EOF'
-          benchmarks:
-            - name: example
+          cat > "$GITHUB_WORKSPACE/codspeed.yml" <<'EOF'
+          version: 1
           EOF
       - id: action
         uses: .
         continue-on-error: true
         with:
-          mode: "walltime"
-          config: "/tmp/codspeed-test/codspeed.yml"
+          mode: "simulation"
+          config: "codspeed.yml"
           allow-empty: "true"
-          runner-version: "latest"
           skip-hash-check-warning: "true"
+          runner-version: "latest"
       - name: Assert action ran with config input
         env:
           OUTCOME: ${{ steps.action.outcome }}

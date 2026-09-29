@@ -14,8 +14,8 @@ jobs:
           cycle-estimation: "false"
           exclude-allocations: "true"
           allow-empty: "true"
-          runner-version: "latest"
           skip-hash-check-warning: "true"
+          runner-version: "latest"
       - name: Assert action ran with cycle-estimation and exclude-allocations inputs
         env:
           OUTCOME: ${{ steps.action.outcome }}

@@ -13,8 +13,8 @@ jobs:
           mode: "walltime"
           go-runner-version: "1.0.0"
           allow-empty: "true"
-          runner-version: "latest"
           skip-hash-check-warning: "true"
+          runner-version: "latest"
       - name: Assert action ran with go-runner-version input
         env:
           OUTCOME: ${{ steps.action.outcome }}
