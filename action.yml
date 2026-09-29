@@ -123,8 +123,8 @@ runs:
         fi
 
         safe_runner_version=$(printf '%s' "$RUNNER_VERSION" | tr -d '\n\r')
-        echo "runner-version=$safe_runner_version" >> "$GITHUB_OUTPUT"
         safe_version_type=$(printf '%s' "$VERSION_TYPE" | tr -d '\n\r')
+        echo "runner-version=$safe_runner_version" >> "$GITHUB_OUTPUT"
         echo "version-type=$safe_version_type" >> "$GITHUB_OUTPUT"
 
         # Get kernel version for cache key
