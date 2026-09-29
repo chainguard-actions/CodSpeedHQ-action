@@ -57,7 +57,7 @@ jobs:
         with:
           mode: simulation
           token: "test-upload-token-12345"
-          upload-url: "https://example.com/upload"
+          upload-url: "https://api.example.com/upload"
           run: "echo 'no benchmarks here'"
           allow-empty: "true"
           runner-version: "latest"
@@ -65,18 +65,18 @@ jobs:
 
       - name: Assert token and upload-url were passed to codspeed
         run: |
+          echo "Checking codspeed was called with token and upload-url args"
           ARGS=$(cat /tmp/codspeed-args.txt 2>/dev/null || echo "")
           echo "codspeed args: $ARGS"
           if echo "$ARGS" | grep -q -- "--token"; then
             echo "PASS: --token argument found"
           else
-            echo "FAIL: --token argument not found in codspeed args"
+            echo "FAIL: --token argument not found in codspeed call"
             exit 1
           fi
           if echo "$ARGS" | grep -q -- "--upload-url"; then
             echo "PASS: --upload-url argument found"
           else
-            echo "FAIL: --upload-url argument not found in codspeed args"
+            echo "FAIL: --upload-url argument not found in codspeed call"
             exit 1
           fi
-          echo "PASS: both token and upload-url were passed correctly"
