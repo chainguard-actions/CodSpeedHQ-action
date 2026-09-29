@@ -1,4 +1,4 @@
-name: Test instruments and mongo-uri-env-name inputs
+name: Test run input (benchmark command)
 on:
   workflow_dispatch:
 jobs:
@@ -16,22 +16,21 @@ jobs:
           # Add mock-bin to PATH so fake curl is found before real curl
           echo "/tmp/mock-bin" >> $GITHUB_PATH
 
-      - name: Run CodSpeed action with instruments and mongo-uri-env-name inputs
+      - name: Run CodSpeed action with run input
         id: action
         uses: .
         with:
           mode: simulation
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          run: "echo 'running benchmarks'"
           allow-empty: "true"
           runner-version: "latest"
           skip-hash-check-warning: "true"
           cache-instruments: "false"
 
-      - name: Assert action completed successfully with instruments inputs
+      - name: Assert action completed successfully with run input
         run: |
           if ! command -v codspeed > /dev/null 2>&1; then
             echo "FAIL: codspeed binary not found after action ran"
             exit 1
           fi
-          echo "PASS: CodSpeed action completed with instruments=mongodb and mongo-uri-env-name set"
+          echo "PASS: CodSpeed action completed with run input set"

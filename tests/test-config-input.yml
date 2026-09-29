@@ -1,4 +1,4 @@
-name: Test go-runner-version and config inputs
+name: Test config input (CodSpeed config file path)
 on:
   workflow_dispatch:
 jobs:
@@ -15,28 +15,27 @@ jobs:
           chmod +x /tmp/mock-bin/curl
           # Add mock-bin to PATH so fake curl is found before real curl
           echo "/tmp/mock-bin" >> $GITHUB_PATH
-          # Create a minimal CodSpeed config file for testing
-          cat > /tmp/codspeed.yml << 'EOF'
-          benchmarks:
-            - name: example
+          # Create a minimal CodSpeed config file
+          mkdir -p /tmp/codspeed-config
+          cat > /tmp/codspeed-config/codspeed.yml << 'EOF'
+          # Minimal CodSpeed configuration for testing
           EOF
 
-      - name: Run CodSpeed action with go-runner-version and config
+      - name: Run CodSpeed action with config input
         id: action
         uses: .
         with:
           mode: simulation
-          go-runner-version: "1.0.0"
-          config: "/tmp/codspeed.yml"
+          config: "/tmp/codspeed-config/codspeed.yml"
           allow-empty: "true"
           runner-version: "latest"
           skip-hash-check-warning: "true"
           cache-instruments: "false"
 
-      - name: Assert action completed successfully with go-runner-version and config
+      - name: Assert action completed successfully with config input
         run: |
           if ! command -v codspeed > /dev/null 2>&1; then
             echo "FAIL: codspeed binary not found after action ran"
             exit 1
           fi
-          echo "PASS: CodSpeed action completed with go-runner-version and config inputs"
+          echo "PASS: CodSpeed action completed with config input set"

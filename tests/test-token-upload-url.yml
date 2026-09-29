@@ -1,4 +1,4 @@
-name: Test run command and token inputs
+name: Test token and upload-url inputs
 on:
   workflow_dispatch:
 jobs:
@@ -16,22 +16,22 @@ jobs:
           # Add mock-bin to PATH so fake curl is found before real curl
           echo "/tmp/mock-bin" >> $GITHUB_PATH
 
-      - name: Run CodSpeed action with run command and token
+      - name: Run CodSpeed action with token and upload-url inputs
         id: action
         uses: .
         with:
           mode: simulation
-          run: "echo hello-benchmark"
-          token: "test-upload-token-12345"
+          token: "test-token-value"
+          upload-url: "https://example.com/upload"
           allow-empty: "true"
           runner-version: "latest"
           skip-hash-check-warning: "true"
           cache-instruments: "false"
 
-      - name: Assert action completed successfully with run and token inputs
+      - name: Assert action completed successfully with token and upload-url
         run: |
           if ! command -v codspeed > /dev/null 2>&1; then
             echo "FAIL: codspeed binary not found after action ran"
             exit 1
           fi
-          echo "PASS: CodSpeed action completed with run and token inputs"
+          echo "PASS: CodSpeed action completed with token and upload-url inputs set"
