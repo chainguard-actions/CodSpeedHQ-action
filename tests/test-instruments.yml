@@ -20,12 +20,12 @@ jobs:
         with:
           mode: "walltime"
           instruments: "mongodb"
-          mongo-uri-env-name: "MONGODB_URI"
+          mongo-uri-env-name: "MONGO_URI"
           runner-version: "latest"
           allow-empty: "true"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
 
-      - name: Assert action completed successfully
+      - name: Assert action completed successfully with instruments inputs
         run: |
-          echo "PASS: CodSpeed action completed with instruments and mongo-uri-env-name inputs"
+          echo "PASS: CodSpeed action completed with instruments=mongodb and mongo-uri-env-name=MONGO_URI"
