@@ -124,10 +124,9 @@ runs:
           VERSION_TYPE="release"
         fi
 
-        SAFE_RUNNER_VERSION=$(printf '%s' "$RUNNER_VERSION" | tr -d '\n\r')
-        echo "runner-version=$SAFE_RUNNER_VERSION" >> $GITHUB_OUTPUT
-        SAFE_VERSION_TYPE=$(printf '%s' "$VERSION_TYPE" | tr -d '\n\r')
-        echo "version-type=$SAFE_VERSION_TYPE" >> $GITHUB_OUTPUT
+        safe_runner_version=$(printf '%s' "$RUNNER_VERSION" | tr -d '\n\r')
+        echo "runner-version=$safe_runner_version" >> $GITHUB_OUTPUT
+        echo "version-type=$VERSION_TYPE" >> $GITHUB_OUTPUT
 
         # Get kernel version for cache key
         KERNEL_VERSION=$(uname -r)
@@ -138,7 +137,7 @@ runs:
         echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT
     - name: Cache CodSpeed instruments
       if: inputs.cache-instruments == 'true'
-      uses: chainguard-actions/actions-cache@9795b39c6b8efcf95b9e7b38308822eb2fa7ea67 # v5.0.4
+      uses: chainguard-actions/actions-cache@ed9cd5fd01ce2aa7cee30b08049c67b74bf1e8c7 # v5.0.4
       with:
         path: ${{ inputs.instruments-cache-dir }}
         key: codspeed-instruments-${{ steps.versions.outputs.mode-cache-key }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.kernel-version }}-${{ steps.versions.outputs.runner-version }}
