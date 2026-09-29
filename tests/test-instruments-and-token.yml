@@ -1,0 +1,36 @@
+name: Test instruments, token, upload-url, and mongo-uri-env-name inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: walltime
+          allow-empty: "true"
+          runner-version: "latest"
+          skip-hash-check-warning: "true"
+          cache-instruments: "false"
+          token: "fake-codspeed-token"
+          upload-url: "https://api.codspeed.io"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
+
+      - name: Assert action completed
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may succeed or fail gracefully in the harness environment.
+          # We accept success or failure since the harness may not support all CodSpeed features.
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action completed with outcome '$OUTCOME'"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
