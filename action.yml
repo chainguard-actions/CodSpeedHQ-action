@@ -125,19 +125,19 @@ runs:
         fi
 
         safe_runner_version=$(printf '%s' "$RUNNER_VERSION" | tr -d '\n\r')
-        echo "runner-version=$safe_runner_version" >> "$GITHUB_OUTPUT"
-        echo "version-type=$VERSION_TYPE" >> "$GITHUB_OUTPUT"
+        echo "runner-version=$safe_runner_version" >> $GITHUB_OUTPUT
+        echo "version-type=$VERSION_TYPE" >> $GITHUB_OUTPUT
 
         # Get kernel version for cache key
         KERNEL_VERSION=$(uname -r)
-        echo "kernel-version=$KERNEL_VERSION" >> "$GITHUB_OUTPUT"
+        echo "kernel-version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
 
         # Normalize mode for cache key (commas are not allowed in cache keys)
-        MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr -d '\n\r' | tr ',' '-')
-        echo "mode-cache-key=$MODE_CACHE_KEY" >> "$GITHUB_OUTPUT"
+        MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr ',' '-' | tr -d '\n\r')
+        echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT
     - name: Cache CodSpeed instruments
       if: inputs.cache-instruments == 'true'
-      uses: chainguard-actions/actions-cache@9795b39c6b8efcf95b9e7b38308822eb2fa7ea67 # v5.0.4
+      uses: chainguard-actions/actions-cache@ed9cd5fd01ce2aa7cee30b08049c67b74bf1e8c7 # v5.0.4
       with:
         path: ${{ inputs.instruments-cache-dir }}
         key: codspeed-instruments-${{ steps.versions.outputs.mode-cache-key }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.kernel-version }}-${{ steps.versions.outputs.runner-version }}
@@ -165,19 +165,19 @@ runs:
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
           fi
-          INSTALL_SCRIPT_LATEST=$(mktemp)
-          trap "rm -f $INSTALL_SCRIPT_LATEST" EXIT
-          curl -fsSL https://codspeed.io/install.sh -o "$INSTALL_SCRIPT_LATEST"
-          bash "$INSTALL_SCRIPT_LATEST" --quiet
+          INSTALLER_TMP=$(mktemp)
+          trap "rm -f $INSTALLER_TMP" EXIT
+          curl -fsSL https://codspeed.io/install.sh -o "$INSTALLER_TMP"
+          bash "$INSTALLER_TMP" --quiet
         elif [ "$VERSION_TYPE" = "prerelease" ]; then
           # Prereleases are not pinned, so install from the versioned installer without hash verification.
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available for prerelease version $RUNNER_VERSION."
           fi
-          INSTALL_SCRIPT_PRE=$(mktemp)
-          trap "rm -f $INSTALL_SCRIPT_PRE" EXIT
-          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALL_SCRIPT_PRE"
-          bash "$INSTALL_SCRIPT_PRE" --quiet
+          INSTALLER_TMP=$(mktemp)
+          trap "rm -f $INSTALLER_TMP" EXIT
+          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALLER_TMP"
+          bash "$INSTALLER_TMP" --quiet
         elif [ "$VERSION_TYPE" = "branch" ]; then
           # Install from specific branch using cargo
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then

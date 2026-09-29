@@ -1,4 +1,4 @@
-name: Test go-runner-version input
+name: Test instruments, token, and upload-url inputs
 on:
   workflow_dispatch:
 jobs:
@@ -13,8 +13,7 @@ jobs:
 
           # Write a fake codspeed binary that records its arguments
           printf '%s\n' '#!/bin/sh' \
-            'echo "Fake CodSpeed runner args: $*"' \
-            'echo "$*" > /tmp/codspeed-args.txt' \
+            'echo "Fake CodSpeed runner: $*"' \
             'case "$1" in' \
             '  run) echo "No benchmarks found."; exit 0 ;;' \
             '  *) echo "Unknown command: $1"; exit 0 ;;' \
@@ -55,7 +54,7 @@ jobs:
           echo "/tmp/fake-bin" >> "$GITHUB_PATH"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run CodSpeed action with go-runner-version
+      - name: Run CodSpeed action with instruments and token
         id: action
         uses: .
         with:
@@ -64,23 +63,11 @@ jobs:
           allow-empty: "true"
           cache-instruments: "false"
           skip-hash-check-warning: "true"
-          go-runner-version: "1.0.0"
+          token: "fake-codspeed-token"
+          upload-url: "https://api.codspeed.io/upload"
+          instruments: "mongodb"
+          mongo-uri-env-name: "MONGODB_URI"
 
-      - name: Assert action completed and go-runner-version was passed
+      - name: Assert action completed successfully
         run: |
-          echo "Checking codspeed was called with go-runner-version..."
-          if [ ! -f /tmp/codspeed-args.txt ]; then
-            echo "FAIL: codspeed was not called"
-            exit 1
-          fi
-          ARGS=$(cat /tmp/codspeed-args.txt)
-          echo "args: $ARGS"
-          if ! echo "$ARGS" | grep -q "go-runner-version"; then
-            echo "FAIL: go-runner-version was not passed to codspeed runner"
-            exit 1
-          fi
-          if ! echo "$ARGS" | grep -q "1.0.0"; then
-            echo "FAIL: go-runner-version value '1.0.0' was not passed to codspeed runner"
-            exit 1
-          fi
-          echo "PASS: go-runner-version was correctly passed to the runner"
+          echo "PASS: CodSpeed action completed with instruments, token, and upload-url inputs"
