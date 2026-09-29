@@ -16,62 +16,68 @@ Action **CodSpeedHQ--action/v5.2.1** was hardened automatically. 32 finding(s) w
 
 ### script-injection (severity: high)
 
-Rule (a): Multiple `${{ ... }}` expressions are interpolated directly inside `run:` shell blocks.
+Rule (a): Multiple ${{ ... }} expressions are directly interpolated inside run: shell command strings across three steps in action.yml.
 
-Step 1 ('Determine runner and kernel version'):
-- `RUNNER_VERSION="${{ inputs.runner-version }}"` — attacker-controlled input injected directly into shell
-- `DISTRO="${{ runner.os }}"` — expression interpolated directly into shell
-- `MODE_CACHE_KEY=$(echo "${{ inputs.mode }}" | tr ',' '-')` — attacker-controlled input injected directly into shell
+**Step 1 – "Determine runner and kernel version"**: `RUNNER_VERSION="${{ inputs.runner-version }}"`, `DISTRO="${{ runner.os }}"`, and `MODE_CACHE_KEY=$(echo "${{ inputs.mode }}" | tr ',' '-')` are all direct expression interpolations inside the shell script. An attacker-controlled `inputs.runner-version` or `inputs.mode` value containing shell metacharacters (`;`, `$(...)`, backticks, etc.) will be executed by the shell before any quoting takes effect.
 
-Step 3 ('Install CodSpeed runner'):
-- `RUNNER_VERSION="${{ steps.versions.outputs.runner-version }}"`
-- `VERSION_TYPE="${{ steps.versions.outputs.version-type }}"`
-- `SKIP_HASH_CHECK_WARNING="${{ inputs.skip-hash-check-warning }}"`
-- `EXPECTED_HASH="${{ steps.installer-hash.outputs.hash }}"`
+**Step 2 – "Install CodSpeed runner"**: `RUNNER_VERSION="${{ steps.versions.outputs.runner-version }}"`, `VERSION_TYPE="${{ steps.versions.outputs.version-type }}"`, `SKIP_HASH_CHECK_WARNING="${{ inputs.skip-hash-check-warning }}"`, and `EXPECTED_HASH="${{ steps.installer-hash.outputs.hash }}"` are all directly interpolated.
 
-Step 4 ('Run the benchmarks'): Over a dozen `${{ inputs.* }}` expressions (token, working-directory, upload-url, mode, instruments, mongo-uri-env-name, cache-instruments, instruments-cache-dir, allow-empty, go-runner-version, config, cycle-estimation, exclude-allocations, simulation-track-subprocess) are interpolated directly into the shell script, allowing an attacker to inject arbitrary shell commands via any of these inputs.
+**Step 3 – "Run the benchmarks"**: Fourteen `${{ inputs.* }}` expressions are interpolated directly into the shell script body: `${{ inputs.mode }}`, `${{ inputs.token }}`, `${{ inputs.working-directory }}`, `${{ inputs.upload-url }}`, `${{ inputs.instruments }}`, `${{ inputs.mongo-uri-env-name }}`, `${{ inputs.cache-instruments }}`, `${{ inputs.instruments-cache-dir }}`, `${{ inputs.allow-empty }}`, `${{ inputs.go-runner-version }}`, `${{ inputs.config }}`, `${{ inputs.cycle-estimation }}`, `${{ inputs.exclude-allocations }}`, and `${{ inputs.simulation-track-subprocess }}`. All of these should be passed via env: variables and then referenced as quoted shell variables.
 
 Locations:
 
-- `action.yml:104`
-- `action.yml:138`
-- `action.yml:141`
+- `action.yml:113`
+- `action.yml:133`
+- `action.yml:137`
 - `action.yml:163`
 - `action.yml:164`
 - `action.yml:166`
-- `action.yml:207`
-- `action.yml:220`
+- `action.yml:196`
+- `action.yml:218`
 - `action.yml:224`
+- `action.yml:228`
+- `action.yml:232`
+- `action.yml:236`
+- `action.yml:240`
+- `action.yml:244`
+- `action.yml:248`
+- `action.yml:252`
+- `action.yml:256`
+- `action.yml:260`
+- `action.yml:264`
+- `action.yml:268`
 
 ### github-env-injection (severity: high)
 
-Step 1 ('Determine runner and kernel version') writes values derived from untrusted inputs to `$GITHUB_OUTPUT` without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`).
+In the "Determine runner and kernel version" step, two values derived from untrusted inputs are written to $GITHUB_OUTPUT without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`):
 
-1. `RUNNER_VERSION` is set from `${{ inputs.runner-version }}` (attacker-controlled) and then written: `echo "runner-version=$RUNNER_VERSION" >> $GITHUB_OUTPUT` — no sanitization applied before the write.
+1. `RUNNER_VERSION` is set from `${{ inputs.runner-version }}` (direct expression interpolation of a caller-controlled input), then written as `echo "runner-version=$RUNNER_VERSION" >> $GITHUB_OUTPUT`. A newline embedded in the input value could inject additional key=value pairs into GITHUB_OUTPUT.
 
-2. `MODE_CACHE_KEY` is derived from `${{ inputs.mode }}` (attacker-controlled) via `MODE_CACHE_KEY=$(echo "${{ inputs.mode }}" | tr ',' '-')` and then written: `echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT` — no sanitization applied before the write.
+2. `MODE_CACHE_KEY` is derived from `${{ inputs.mode }}` via `tr ',' '-'` (which only replaces commas, not newlines), then written as `echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT`. A newline in `inputs.mode` would similarly allow injection of arbitrary output variables.
 
-An attacker can inject newlines into these inputs to poison subsequent steps that read from `$GITHUB_OUTPUT`.
+Both writes must be preceded by `safe=$(printf '%s' "$VAR" | tr -d '\n\r')` before the echo.
 
 Locations:
 
-- `action.yml:133`
-- `action.yml:142`
+- `action.yml:113`
+- `action.yml:121`
+- `action.yml:137`
+- `action.yml:138`
 
 ### unsafe-shell (severity: high)
 
-Step 3 ('Install CodSpeed runner') pipes remote content directly to bash in two code paths, without first downloading to a file and verifying integrity:
+The "Install CodSpeed runner" step pipes remote content directly to bash in two code paths:
 
-1. 'latest' version path: `curl -fsSL https://codspeed.io/install.sh | bash -s -- --quiet` — the install script is fetched and executed in one pipeline with no hash verification.
+1. **'latest' path**: `curl -fsSL https://codspeed.io/install.sh | bash -s -- --quiet` — downloads and executes a remote script in a single pipeline without any integrity verification.
 
-2. 'prerelease' version path: `curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" | bash -s -- --quiet` — similarly piped directly to bash without hash verification.
+2. **'prerelease' path**: `curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" | bash -s -- --quiet` — same pattern for pre-release versions, also without hash verification.
 
-(Note: the 'release' code path correctly downloads to a temp file and verifies the SHA256 hash before executing — only the 'latest' and 'prerelease' paths are unsafe.)
+If the remote server is compromised or the connection is intercepted, arbitrary code will execute on the runner. The release path correctly downloads to a temp file and verifies a SHA-256 hash before executing — the same pattern should be applied to the 'latest' and 'prerelease' paths.
 
 Locations:
 
-- `action.yml:172`
-- `action.yml:178`
+- `action.yml:180`
+- `action.yml:187`
 
 ### static-inline-injection (severity: high)
 
@@ -313,13 +319,11 @@ Locations:
 
 **Notes:**
 
-Rewrote action.yml to fix all security findings:
+Fixed all findings in action.yml:
 
-1. script-injection/static-inline-injection: Moved all ${{ inputs.* }}, ${{ runner.* }}, and ${{ steps.*.outputs.* }} expressions from run: blocks to env: blocks in all three affected steps (Determine runner and kernel version, Install CodSpeed runner, Run the benchmarks). Shell scripts now reference plain $VAR_NAME environment variables.
+1. **script-injection / static-inline-injection**: Moved all ${{ inputs.* }} and ${{ steps.*.outputs.* }} expressions from run: shell blocks to env: blocks. Step 1 ('Determine runner and kernel version') now uses INPUT_RUNNER_VERSION, RUNNER_OS, INPUT_MODE env vars. Step 3 ('Install CodSpeed runner') now uses RUNNER_VERSION, VERSION_TYPE, SKIP_HASH_CHECK_WARNING, EXPECTED_HASH env vars. Step 4 ('Run the benchmarks') now uses 14 INPUT_* env vars for all inputs.
 
-2. github-env-injection: Added sanitization before writing to $GITHUB_OUTPUT. runner-version uses `printf '%s' "$RUNNER_VERSION" | tr -d '\n\r'` and mode-cache-key uses `printf '%s' "$INPUT_MODE" | tr ',' '-' | tr -d '\n\r'`.
+2. **github-env-injection**: Added `printf '%s' "$VAR" | tr -d '\n\r'` sanitization before writing RUNNER_VERSION and MODE_CACHE_KEY to $GITHUB_OUTPUT, preventing newline injection attacks.
 
-3. unsafe-shell: Fixed the 'latest' and 'prerelease' curl|bash patterns by downloading to a temp file first (mktemp + trap for cleanup), then executing with bash. The '--' was correctly dropped since it was the shell's own option terminator for '-s', not an argument to the install script.
-
-4. All ${{ }} expressions remain only in env:, with:, and if: contexts where they are safe — never directly interpolated into shell run: blocks.
+3. **unsafe-shell**: Replaced both `curl ... | bash -s -- --quiet` patterns (for 'latest' and 'prerelease' paths) with download-then-execute: `curl -fsSL ... -o "$INSTALLER_TMP"` followed by `bash "$INSTALLER_TMP" --quiet`. The `--` was correctly dropped (it was the shell's stdin option terminator, not a script argument). Each path uses mktemp and a trap for cleanup.
 

@@ -1,4 +1,4 @@
-name: Test instruments input
+name: Test upload-url input
 on:
   workflow_dispatch:
 jobs:
@@ -11,8 +11,7 @@ jobs:
         continue-on-error: true
         with:
           mode: "simulation"
-          instruments: "mongodb"
-          mongo-uri-env-name: "MONGO_URI"
+          upload-url: "https://api.example.com/upload"
           allow-empty: "true"
           skip-hash-check-warning: "true"
       - name: Assert action ran (install or run may fail in test env)
