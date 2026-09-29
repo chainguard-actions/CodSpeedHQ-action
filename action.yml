@@ -163,7 +163,7 @@ runs:
         echo "mode-cache-key=$safe_mode_cache_key" >> "$GITHUB_OUTPUT"
     - name: Cache CodSpeed instruments
       if: inputs.cache-instruments == 'true'
-      uses: chainguard-actions/actions-cache@9795b39c6b8efcf95b9e7b38308822eb2fa7ea67 # v5.0.4
+      uses: chainguard-actions/actions-cache@ed9cd5fd01ce2aa7cee30b08049c67b74bf1e8c7 # v5.0.4
       with:
         path: ${{ inputs.instruments-cache-dir }}
         key: codspeed-instruments-${{ steps.versions.outputs.mode-cache-key }}-${{ steps.versions.outputs.distro }}-${{ runner.arch }}-${{ steps.versions.outputs.kernel-version }}-${{ steps.versions.outputs.runner-version }}
