@@ -10,7 +10,7 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          mode: walltime
+          mode: simulation
           go-runner-version: "1.0.0"
           allow-empty: "true"
           skip-hash-check-warning: "true"

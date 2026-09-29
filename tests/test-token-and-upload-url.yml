@@ -10,7 +10,7 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          mode: walltime
+          mode: simulation
           token: fake-codspeed-token
           upload-url: https://api.codspeed.io/upload
           allow-empty: "true"
