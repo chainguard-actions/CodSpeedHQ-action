@@ -143,7 +143,7 @@ runs:
           codspeed-instruments-${{ steps.versions.outputs.mode-cache-key }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.versions.outputs.kernel-version }}-
     - name: Lookup installer hash
       id: installer-hash
-      uses: chainguard-actions/actions-github-script@c016e3163cf6a74fc76e781c8239af596ae9b9b7 # v7.0.1
+      uses: chainguard-actions/actions-github-script@2b8beddf2d0d1ba8e353f16cae078671866153e7 # v7.0.1
       env:
         RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
       with:
