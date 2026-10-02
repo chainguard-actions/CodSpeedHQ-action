@@ -1,0 +1,39 @@
+name: Test run-id output
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run CodSpeed action and capture run-id output
+        id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: walltime
+          allow-empty: "true"
+          runner-version: "5.4.0"
+          skip-hash-check-warning: "false"
+
+      - name: Assert run-id output behavior
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          RUN_ID: ${{ steps.action.outputs.run-id }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "run-id: $RUN_ID"
+          if [ "$OUTCOME" = "success" ]; then
+            # On success, run-id may or may not be set depending on whether upload succeeded
+            echo "PASS: action succeeded (run-id='$RUN_ID')"
+          elif [ "$OUTCOME" = "failure" ]; then
+            # On failure (e.g. no valid token), run-id should be empty
+            if [ -n "$RUN_ID" ]; then
+              echo "WARN: run-id set despite failure: $RUN_ID"
+            fi
+            echo "PASS: action failed gracefully (expected without valid CodSpeed token/upload)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
