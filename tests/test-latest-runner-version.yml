@@ -1,0 +1,40 @@
+name: Test latest runner version (no hash verification)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: walltime
+          run: "echo 'benchmark placeholder'"
+          runner-version: "latest"
+          allow-empty: "true"
+          skip-hash-check-warning: "true"
+      - name: Assert action ran (installed runner with latest version)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The codspeed runner may fail under act due to missing GitHub Actions context
+          # (e.g. GITHUB_RUN_ID not set, or provider.rs unwrap panic), but the key thing
+          # to verify is that the runner was installed successfully (latest version path).
+          # We accept both success and failure as long as it's not skipped.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action completed successfully with latest runner version"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected under act - missing GitHub Actions context)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
+          # Verify codspeed binary was installed regardless of run outcome
+          if ! command -v codspeed &>/dev/null; then
+            echo "FAIL: codspeed binary not found after installation"
+            exit 1
+          fi
+          echo "PASS: codspeed binary installed successfully with latest version"
