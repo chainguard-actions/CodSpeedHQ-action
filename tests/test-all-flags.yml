@@ -1,0 +1,121 @@
+name: Test all optional flags are forwarded (mocked runner)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake curl and fake codspeed installer
+        run: |
+          set -e
+          mkdir -p /tmp/fakebin
+          rm -f /tmp/codspeed-args.txt /tmp/curl-calls.log /tmp/installer-calls.log
+          REAL_CURL="$(command -v curl || echo /usr/bin/curl)"
+          echo "$REAL_CURL" > /tmp/real-curl-path
+
+          cat > /tmp/fake-codspeed <<'EOF'
+          #!/bin/bash
+          : > /tmp/codspeed-args.txt
+          for a in "$@"; do printf '%s\n' "$a" >> /tmp/codspeed-args.txt; done
+          echo "run-id=fake-run-456" >> "$GITHUB_OUTPUT"
+          EOF
+          chmod +x /tmp/fake-codspeed
+
+          cat > /tmp/fake-install.sh <<'EOF'
+          #!/bin/bash
+          echo "installer args: $*" >> /tmp/installer-calls.log
+          cp /tmp/fake-codspeed /tmp/fakebin/codspeed
+          chmod +x /tmp/fakebin/codspeed
+          EOF
+
+          cat > /tmp/fakebin/curl <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/curl-calls.log
+          out=""
+          prev=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *codspeed.io*install.sh*)
+              if [ -n "$out" ]; then
+                cat /tmp/fake-install.sh > "$out"
+              else
+                cat /tmp/fake-install.sh
+              fi
+              exit 0
+              ;;
+          esac
+          exec "$(cat /tmp/real-curl-path)" "$@"
+          EOF
+          chmod +x /tmp/fakebin/curl
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          mode: memory
+          run: ./bench.sh --fast
+          runner-version: latest
+          skip-hash-check-warning: "true"
+          cache-instruments: "false"
+          token: test-upload-token
+          working-directory: subdir
+          upload-url: https://codspeed.example.com/upload
+          instruments: mongodb
+          mongo-uri-env-name: MY_MONGO_URI
+          allow-empty: "true"
+          go-runner-version: 1.0.0-beta.1
+          config: custom/codspeed.yml
+          cycle-estimation: "false"
+          exclude-allocations: "true"
+          simulation-track-subprocess: "true"
+          disable-memory-track-physical: "true"
+          disable-memory-capture-stack: "true"
+      - name: Assert all flags forwarded
+        env:
+          RUN_ID: ${{ steps.action.outputs.run-id }}
+        run: |
+          echo "--- codspeed args ---"; cat /tmp/codspeed-args.txt || true
+          echo "run-id: $RUN_ID"
+          [ -f /tmp/codspeed-args.txt ] || { echo "FAIL: codspeed not invoked"; exit 1; }
+          fail=0
+          for expected in \
+            'run' \
+            '--token' \
+            'test-upload-token' \
+            '--working-directory=subdir' \
+            '--upload-url=https://codspeed.example.com/upload' \
+            '--mode=memory' \
+            '--instruments=mongodb' \
+            '--mongo-uri-env-name=MY_MONGO_URI' \
+            '--allow-empty' \
+            '--go-runner-version=1.0.0-beta.1' \
+            '--config=custom/codspeed.yml' \
+            '--cycle-estimation=false' \
+            '--exclude-allocations=true' \
+            '--simulation-track-subprocess' \
+            '--disable-memory-track-physical' \
+            '--disable-memory-capture-stack' \
+            '--' \
+            './bench.sh --fast'; do
+            if grep -qxF -- "$expected" /tmp/codspeed-args.txt; then
+              echo "ok: $expected"
+            else
+              echo "FAIL: missing arg '$expected'"; fail=1
+            fi
+          done
+          if grep -q -- '--setup-cache-dir' /tmp/codspeed-args.txt; then
+            echo "FAIL: --setup-cache-dir should not be passed when cache disabled"; fail=1
+          fi
+          if [ "$(tail -n1 /tmp/codspeed-args.txt)" != "./bench.sh --fast" ]; then
+            echo "FAIL: run command should be last"; fail=1
+          fi
+          if [ "$RUN_ID" != "fake-run-456" ]; then
+            echo "FAIL: expected run-id fake-run-456"; fail=1
+          fi
+          [ "$fail" = 0 ] || exit 1
+          echo "PASS"

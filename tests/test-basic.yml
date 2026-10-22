@@ -1,0 +1,96 @@
+name: Test basic simulation run (mocked runner)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake curl and fake codspeed installer
+        run: |
+          set -e
+          mkdir -p /tmp/fakebin
+          rm -f /tmp/codspeed-args.txt /tmp/curl-calls.log /tmp/installer-calls.log
+          REAL_CURL="$(command -v curl || echo /usr/bin/curl)"
+          echo "$REAL_CURL" > /tmp/real-curl-path
+
+          # Fake codspeed binary: records its args, one per line, and sets run-id output
+          cat > /tmp/fake-codspeed <<'EOF'
+          #!/bin/bash
+          : > /tmp/codspeed-args.txt
+          for a in "$@"; do printf '%s\n' "$a" >> /tmp/codspeed-args.txt; done
+          echo "run-id=fake-run-123" >> "$GITHUB_OUTPUT"
+          echo "fake codspeed ran with: $*"
+          EOF
+          chmod +x /tmp/fake-codspeed
+
+          # Fake installer script: installs the fake codspeed into /tmp/fakebin
+          cat > /tmp/fake-install.sh <<'EOF'
+          #!/bin/bash
+          echo "installer args: $*" >> /tmp/installer-calls.log
+          cp /tmp/fake-codspeed /tmp/fakebin/codspeed
+          chmod +x /tmp/fakebin/codspeed
+          EOF
+
+          # Fake curl: honors -o (hardened form) and stdout (pipe form)
+          cat > /tmp/fakebin/curl <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/curl-calls.log
+          out=""
+          prev=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *codspeed.io*install.sh*)
+              if [ -n "$out" ]; then
+                cat /tmp/fake-install.sh > "$out"
+              else
+                cat /tmp/fake-install.sh
+              fi
+              exit 0
+              ;;
+          esac
+          exec "$(cat /tmp/real-curl-path)" "$@"
+          EOF
+          chmod +x /tmp/fakebin/curl
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          mode: simulation
+          run: echo hello benchmarks
+          runner-version: latest
+          skip-hash-check-warning: "true"
+          cache-instruments: "false"
+      - name: Assert runner invoked with expected args
+        env:
+          RUN_ID: ${{ steps.action.outputs.run-id }}
+        run: |
+          echo "--- curl calls ---"; cat /tmp/curl-calls.log || true
+          echo "--- codspeed args ---"; cat /tmp/codspeed-args.txt || true
+          echo "run-id: $RUN_ID"
+          if [ ! -f /tmp/codspeed-args.txt ]; then
+            echo "FAIL: codspeed was not invoked"; exit 1
+          fi
+          if [ "$(head -n1 /tmp/codspeed-args.txt)" != "run" ]; then
+            echo "FAIL: first arg should be 'run'"; exit 1
+          fi
+          grep -qx -- '--mode=simulation' /tmp/codspeed-args.txt || { echo "FAIL: missing --mode=simulation"; exit 1; }
+          grep -qx -- '--' /tmp/codspeed-args.txt || { echo "FAIL: missing -- separator"; exit 1; }
+          if [ "$(tail -n1 /tmp/codspeed-args.txt)" != "echo hello benchmarks" ]; then
+            echo "FAIL: last arg should be the run command"; exit 1
+          fi
+          if grep -q -- '--setup-cache-dir' /tmp/codspeed-args.txt; then
+            echo "FAIL: --setup-cache-dir should not be passed when cache disabled"; exit 1
+          fi
+          if grep -q -- '--allow-empty' /tmp/codspeed-args.txt; then
+            echo "FAIL: --allow-empty should not be passed by default"; exit 1
+          fi
+          if [ "$RUN_ID" != "fake-run-123" ]; then
+            echo "FAIL: expected run-id 'fake-run-123'"; exit 1
+          fi
+          echo "PASS"

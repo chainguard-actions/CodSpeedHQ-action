@@ -1,0 +1,77 @@
+name: Test missing mode input fails
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake curl and fake codspeed installer
+        run: |
+          set -e
+          mkdir -p /tmp/fakebin
+          rm -f /tmp/codspeed-args.txt /tmp/curl-calls.log /tmp/installer-calls.log
+          REAL_CURL="$(command -v curl || echo /usr/bin/curl)"
+          echo "$REAL_CURL" > /tmp/real-curl-path
+
+          cat > /tmp/fake-codspeed <<'EOF'
+          #!/bin/bash
+          : > /tmp/codspeed-args.txt
+          for a in "$@"; do printf '%s\n' "$a" >> /tmp/codspeed-args.txt; done
+          echo "run-id=fake-run-123" >> "$GITHUB_OUTPUT"
+          EOF
+          chmod +x /tmp/fake-codspeed
+
+          cat > /tmp/fake-install.sh <<'EOF'
+          #!/bin/bash
+          echo "installer args: $*" >> /tmp/installer-calls.log
+          cp /tmp/fake-codspeed /tmp/fakebin/codspeed
+          chmod +x /tmp/fakebin/codspeed
+          EOF
+
+          cat > /tmp/fakebin/curl <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/curl-calls.log
+          out=""
+          prev=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *codspeed.io*install.sh*)
+              if [ -n "$out" ]; then
+                cat /tmp/fake-install.sh > "$out"
+              else
+                cat /tmp/fake-install.sh
+              fi
+              exit 0
+              ;;
+          esac
+          exec "$(cat /tmp/real-curl-path)" "$@"
+          EOF
+          chmod +x /tmp/fakebin/curl
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: ""
+          run: echo should-not-run
+          runner-version: latest
+          skip-hash-check-warning: "true"
+          cache-instruments: "false"
+      - name: Assert action failed and runner was not invoked
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected failure when mode is empty"; exit 1
+          fi
+          if [ -f /tmp/codspeed-args.txt ]; then
+            echo "FAIL: codspeed should not have been invoked"; cat /tmp/codspeed-args.txt; exit 1
+          fi
+          echo "PASS"

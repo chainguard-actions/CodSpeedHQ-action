@@ -1,0 +1,79 @@
+name: Test prerelease runner version with multiple modes (mocked runner)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake curl and fake codspeed installer
+        run: |
+          set -e
+          mkdir -p /tmp/fakebin
+          rm -f /tmp/codspeed-args.txt /tmp/curl-calls.log /tmp/installer-calls.log
+          REAL_CURL="$(command -v curl || echo /usr/bin/curl)"
+          echo "$REAL_CURL" > /tmp/real-curl-path
+
+          cat > /tmp/fake-codspeed <<'EOF'
+          #!/bin/bash
+          : > /tmp/codspeed-args.txt
+          for a in "$@"; do printf '%s\n' "$a" >> /tmp/codspeed-args.txt; done
+          echo "run-id=fake-run-789" >> "$GITHUB_OUTPUT"
+          EOF
+          chmod +x /tmp/fake-codspeed
+
+          cat > /tmp/fake-install.sh <<'EOF'
+          #!/bin/bash
+          echo "installer args: $*" >> /tmp/installer-calls.log
+          cp /tmp/fake-codspeed /tmp/fakebin/codspeed
+          chmod +x /tmp/fakebin/codspeed
+          EOF
+
+          cat > /tmp/fakebin/curl <<'EOF'
+          #!/bin/sh
+          echo "$*" >> /tmp/curl-calls.log
+          out=""
+          prev=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *codspeed.io*install.sh*)
+              if [ -n "$out" ]; then
+                cat /tmp/fake-install.sh > "$out"
+              else
+                cat /tmp/fake-install.sh
+              fi
+              exit 0
+              ;;
+          esac
+          exec "$(cat /tmp/real-curl-path)" "$@"
+          EOF
+          chmod +x /tmp/fakebin/curl
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          mode: simulation,walltime
+          run: echo multi
+          runner-version: v9.9.9-beta.1
+          cache-instruments: "false"
+      - name: Assert prerelease installer URL and multi-mode arg
+        env:
+          RUN_ID: ${{ steps.action.outputs.run-id }}
+        run: |
+          echo "--- curl calls ---"; cat /tmp/curl-calls.log || true
+          echo "--- installer calls ---"; cat /tmp/installer-calls.log || true
+          echo "--- codspeed args ---"; cat /tmp/codspeed-args.txt || true
+          grep -q 'codspeed.io/v9.9.9-beta.1/install.sh' /tmp/curl-calls.log || { echo "FAIL: prerelease installer URL not used (v prefix should be normalized)"; exit 1; }
+          if grep -q 'codspeed.io/vv9' /tmp/curl-calls.log; then
+            echo "FAIL: v prefix was not stripped"; exit 1
+          fi
+          grep -q -- '--quiet' /tmp/installer-calls.log || { echo "FAIL: installer not run with --quiet"; exit 1; }
+          grep -qx -- '--mode=simulation,walltime' /tmp/codspeed-args.txt || { echo "FAIL: missing --mode=simulation,walltime"; exit 1; }
+          [ "$(tail -n1 /tmp/codspeed-args.txt)" = "echo multi" ] || { echo "FAIL: run command not last"; exit 1; }
+          [ "$RUN_ID" = "fake-run-789" ] || { echo "FAIL: expected run-id fake-run-789, got '$RUN_ID'"; exit 1; }
+          echo "PASS"
