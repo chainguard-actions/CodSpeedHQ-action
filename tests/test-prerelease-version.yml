@@ -1,0 +1,68 @@
+name: Test prerelease runner version uses versioned installer URL
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up mocked curl, installer and codspeed CLI
+        run: |
+          mkdir -p "$HOME/mockbin" "$HOME/mock-log" "$HOME/mockdata"
+          rm -f "$HOME/mock-log/"*
+          cat > "$HOME/mockdata/fake-install.sh" <<'INSTALLER'
+          #!/bin/bash
+          echo "fake installer args: $*" >> "$HOME/mock-log/installer.log"
+          cat > "$HOME/mockbin/codspeed" <<'CLI'
+          #!/bin/bash
+          printf '%s\n' "$@" > "$HOME/mock-log/codspeed-args.txt"
+          CLI
+          chmod +x "$HOME/mockbin/codspeed"
+          INSTALLER
+          cat > "$HOME/mockbin/curl" <<'CURL'
+          #!/bin/sh
+          echo "$*" >> "$HOME/mock-log/curl.log"
+          out=""; prev=""; wout=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+              -w|--write-out) wout="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *codspeed.io*)
+              if [ -n "$out" ]; then
+                cat "$HOME/mockdata/fake-install.sh" > "$out"
+              else
+                cat "$HOME/mockdata/fake-install.sh"
+              fi
+              if [ -n "$wout" ]; then printf '200'; fi
+              exit 0
+              ;;
+          esac
+          exec /usr/bin/curl "$@"
+          CURL
+          chmod +x "$HOME/mockbin/curl"
+          echo "$HOME/mockbin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          mode: memory
+          runner-version: v5.0.0-beta.1
+          cache-instruments: "false"
+          run: echo bench
+      - name: Assert versioned URL used (v prefix normalized) and codspeed invoked
+        run: |
+          echo "--- curl log"; cat "$HOME/mock-log/curl.log" || exit 1
+          if ! grep -q 'codspeed.io/v5.0.0-beta.1/install.sh' "$HOME/mock-log/curl.log"; then
+            echo "FAIL: expected prerelease installer URL"; exit 1
+          fi
+          if grep -q 'codspeed.io/vv5' "$HOME/mock-log/curl.log"; then
+            echo "FAIL: v prefix was not stripped"; exit 1
+          fi
+          echo "--- codspeed args"; cat "$HOME/mock-log/codspeed-args.txt" || exit 1
+          if ! grep -qFx -- '--mode=memory' "$HOME/mock-log/codspeed-args.txt"; then
+            echo "FAIL: --mode=memory missing"; exit 1
+          fi
+          echo "PASS"

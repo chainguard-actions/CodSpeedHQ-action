@@ -1,0 +1,80 @@
+name: Test basic usage (latest runner, mocked installer)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up mocked curl, installer and codspeed CLI
+        run: |
+          mkdir -p "$HOME/mockbin" "$HOME/mock-log" "$HOME/mockdata"
+          rm -f "$HOME/mock-log/"*
+          cat > "$HOME/mockdata/fake-install.sh" <<'INSTALLER'
+          #!/bin/bash
+          echo "fake installer args: $*" >> "$HOME/mock-log/installer.log"
+          cat > "$HOME/mockbin/codspeed" <<'CLI'
+          #!/bin/bash
+          printf '%s\n' "$@" > "$HOME/mock-log/codspeed-args.txt"
+          echo "run-id=fake-run-123" >> "$GITHUB_OUTPUT"
+          CLI
+          chmod +x "$HOME/mockbin/codspeed"
+          INSTALLER
+          cat > "$HOME/mockbin/curl" <<'CURL'
+          #!/bin/sh
+          echo "$*" >> "$HOME/mock-log/curl.log"
+          out=""; prev=""; wout=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+              -w|--write-out) wout="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *codspeed.io*)
+              if [ -n "$out" ]; then
+                cat "$HOME/mockdata/fake-install.sh" > "$out"
+              else
+                cat "$HOME/mockdata/fake-install.sh"
+              fi
+              if [ -n "$wout" ]; then printf '200'; fi
+              exit 0
+              ;;
+          esac
+          exec /usr/bin/curl "$@"
+          CURL
+          # strip the leading indentation the heredocs inherit from YAML (none expected, but be safe)
+          sed -i 's/^          //' "$HOME/mockdata/fake-install.sh" "$HOME/mockbin/curl"
+          chmod +x "$HOME/mockbin/curl"
+          echo "$HOME/mockbin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          mode: simulation
+          runner-version: latest
+          cache-instruments: "false"
+          run: echo hello
+      - name: Assert installer ran and codspeed received expected args
+        env:
+          RUN_ID: ${{ steps.action.outputs.run-id }}
+        run: |
+          echo "--- curl log"; cat "$HOME/mock-log/curl.log" || true
+          echo "--- installer log"; cat "$HOME/mock-log/installer.log" || true
+          echo "--- codspeed args"; cat "$HOME/mock-log/codspeed-args.txt" || true
+          echo "run-id: $RUN_ID"
+          if ! grep -q 'codspeed.io/install.sh' "$HOME/mock-log/curl.log"; then
+            echo "FAIL: latest installer URL was not requested"; exit 1
+          fi
+          if ! grep -q -- '--quiet' "$HOME/mock-log/installer.log"; then
+            echo "FAIL: installer not run with --quiet"; exit 1
+          fi
+          EXPECTED="$(printf '%s\n' run --mode=simulation -- 'echo hello')"
+          ACTUAL="$(cat "$HOME/mock-log/codspeed-args.txt")"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "FAIL: expected args:"; echo "$EXPECTED"; exit 1
+          fi
+          if [ "$RUN_ID" != "fake-run-123" ]; then
+            echo "FAIL: expected run-id output 'fake-run-123'"; exit 1
+          fi
+          echo "PASS"

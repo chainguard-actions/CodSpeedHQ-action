@@ -1,0 +1,110 @@
+name: Test all optional inputs are forwarded to codspeed
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up mocked curl, installer and codspeed CLI
+        run: |
+          mkdir -p "$HOME/mockbin" "$HOME/mock-log" "$HOME/mockdata"
+          rm -f "$HOME/mock-log/"*
+          cat > "$HOME/mockdata/fake-install.sh" <<'INSTALLER'
+          #!/bin/bash
+          echo "fake installer args: $*" >> "$HOME/mock-log/installer.log"
+          cat > "$HOME/mockbin/codspeed" <<'CLI'
+          #!/bin/bash
+          printf '%s\n' "$@" > "$HOME/mock-log/codspeed-args.txt"
+          echo "run-id=fake-run-456" >> "$GITHUB_OUTPUT"
+          CLI
+          chmod +x "$HOME/mockbin/codspeed"
+          INSTALLER
+          cat > "$HOME/mockbin/curl" <<'CURL'
+          #!/bin/sh
+          echo "$*" >> "$HOME/mock-log/curl.log"
+          out=""; prev=""; wout=""
+          for arg in "$@"; do
+            case "$prev" in
+              -o|--output) out="$arg" ;;
+              -w|--write-out) wout="$arg" ;;
+            esac
+            prev="$arg"
+          done
+          case "$*" in
+            *codspeed.io*)
+              if [ -n "$out" ]; then
+                cat "$HOME/mockdata/fake-install.sh" > "$out"
+              else
+                cat "$HOME/mockdata/fake-install.sh"
+              fi
+              if [ -n "$wout" ]; then printf '200'; fi
+              exit 0
+              ;;
+          esac
+          exec /usr/bin/curl "$@"
+          CURL
+          chmod +x "$HOME/mockbin/curl"
+          echo "$HOME/mockbin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          mode: simulation,walltime
+          runner-version: latest
+          skip-hash-check-warning: "true"
+          cache-instruments: "false"
+          token: test-upload-token
+          working-directory: tests
+          upload-url: https://upload.example.com/upload
+          instruments: mongodb
+          mongo-uri-env-name: MONGO_URL
+          allow-empty: "true"
+          go-runner-version: 1.0.0
+          config: codspeed.yml
+          cycle-estimation: "false"
+          exclude-allocations: "true"
+          simulation-track-subprocess: "true"
+          disable-memory-track-physical: "true"
+          disable-memory-capture-stack: "true"
+          run: ./bench.sh
+      - name: Assert all flags forwarded
+        env:
+          RUN_ID: ${{ steps.action.outputs.run-id }}
+        run: |
+          ARGS="$HOME/mock-log/codspeed-args.txt"
+          echo "--- codspeed args"; cat "$ARGS" || exit 1
+          fail=0
+          for expected in \
+            run \
+            --token test-upload-token \
+            --working-directory=tests \
+            --upload-url=https://upload.example.com/upload \
+            --mode=simulation,walltime \
+            --instruments=mongodb \
+            --mongo-uri-env-name=MONGO_URL \
+            --allow-empty \
+            --go-runner-version=1.0.0 \
+            --config=codspeed.yml \
+            --cycle-estimation=false \
+            --exclude-allocations=true \
+            --simulation-track-subprocess \
+            --disable-memory-track-physical \
+            --disable-memory-capture-stack \
+            -- \
+            ./bench.sh; do
+            if ! grep -qFx -- "$expected" "$ARGS"; then
+              echo "FAIL: missing arg '$expected'"; fail=1
+            fi
+          done
+          if grep -q -- '--setup-cache-dir' "$ARGS"; then
+            echo "FAIL: --setup-cache-dir should not be passed when caching is disabled"; fail=1
+          fi
+          if [ "$(tail -n1 "$ARGS")" != "./bench.sh" ]; then
+            echo "FAIL: run command should be last arg"; fail=1
+          fi
+          echo "run-id: $RUN_ID"
+          if [ "$RUN_ID" != "fake-run-456" ]; then
+            echo "FAIL: run-id output mismatch"; fail=1
+          fi
+          [ "$fail" = 0 ] || exit 1
+          echo "PASS"
