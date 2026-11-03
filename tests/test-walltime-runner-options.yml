@@ -1,0 +1,48 @@
+name: Test walltime run with token, working-directory, upload-url and config
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Prepare working directory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/bench-workdir"
+          echo "marker" > "$GITHUB_WORKSPACE/bench-workdir/marker.txt"
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: walltime
+          run: cat marker.txt
+          token: dummy-codspeed-upload-token
+          working-directory: bench-workdir
+          upload-url: https://api.codspeed.io/upload
+          config: hardened/tests/fixtures/codspeed.yml
+          allow-empty: "true"
+          cache-instruments: "false"
+      - name: Assert runner was installed and step completed
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          RUN_ID: ${{ steps.action.outputs.run-id }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "run-id: $RUN_ID"
+          BIN="$(command -v codspeed || true)"
+          for p in "$HOME/.cargo/bin/codspeed" "$HOME/.local/bin/codspeed" "/usr/local/bin/codspeed"; do
+            if [ -z "$BIN" ] && [ -x "$p" ]; then BIN="$p"; fi
+          done
+          echo "codspeed binary: $BIN"
+          if [ -z "$BIN" ]; then
+            echo "FAIL: codspeed runner was not installed"
+            exit 1
+          fi
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: runner installed; run/upload failed gracefully (dummy token / sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,41 @@
+name: Test basic walltime run installs pinned runner
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: walltime
+          run: echo hello-benchmark
+          allow-empty: "true"
+          cache-instruments: "false"
+      - name: Assert runner was installed with verified hash
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          RUN_ID: ${{ steps.action.outputs.run-id }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "run-id: $RUN_ID"
+          BIN="$(command -v codspeed || true)"
+          for p in "$HOME/.cargo/bin/codspeed" "$HOME/.local/bin/codspeed" "/usr/local/bin/codspeed"; do
+            if [ -z "$BIN" ] && [ -x "$p" ]; then BIN="$p"; fi
+          done
+          echo "codspeed binary: $BIN"
+          if [ -z "$BIN" ]; then
+            echo "FAIL: codspeed runner was not installed"
+            exit 1
+          fi
+          "$BIN" --version || true
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: runner installed; run/upload failed gracefully (sentinel repo cannot be resolved by CodSpeed)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

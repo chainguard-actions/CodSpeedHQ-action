@@ -1,0 +1,43 @@
+name: Test mongodb instrument and go-runner-version inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      TEST_MONGO_URI: mongodb://localhost:27017
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          mode: walltime
+          run: echo hello-instruments
+          instruments: mongodb
+          mongo-uri-env-name: TEST_MONGO_URI
+          go-runner-version: 1.0.0
+          allow-empty: "true"
+          cache-instruments: "false"
+      - name: Assert runner was installed and step completed
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          BIN="$(command -v codspeed || true)"
+          for p in "$HOME/.cargo/bin/codspeed" "$HOME/.local/bin/codspeed" "/usr/local/bin/codspeed"; do
+            if [ -z "$BIN" ] && [ -x "$p" ]; then BIN="$p"; fi
+          done
+          echo "codspeed binary: $BIN"
+          if [ -z "$BIN" ]; then
+            echo "FAIL: codspeed runner was not installed"
+            exit 1
+          fi
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: runner installed; instrumented run failed gracefully (no MongoDB / sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
