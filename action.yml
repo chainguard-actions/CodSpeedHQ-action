@@ -213,7 +213,7 @@ runs:
 
     - name: Lookup installer hash
       id: installer-hash
-      uses: chainguard-actions/actions-github-script@3b0d5713a5687799c90a099fd5b352d9c82d36fe # v8.0.0
+      uses: chainguard-actions/actions-github-script@f4fcecdfd51f0ed717ba8357b11d462ee41d0540 # v8.0.0
       env:
         RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
       with:
