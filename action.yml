@@ -149,11 +149,10 @@ runs:
       id: versions
       shell: bash
       env:
-        INPUT_RUNNER_VERSION: ${{ inputs.runner-version }}
-        INPUT_MODE: ${{ inputs.mode }}
-        GH_RUNNER_OS: ${{ runner.os }}
+        GHA_INPUT_RUNNER_VERSION: ${{ inputs.runner-version }}
+        GHA_INPUT_MODE: ${{ inputs.mode }}
       run: |
-        RUNNER_VERSION="$INPUT_RUNNER_VERSION"
+        RUNNER_VERSION="$GHA_INPUT_RUNNER_VERSION"
         if [ -z "$RUNNER_VERSION" ]; then
           RUNNER_VERSION=$(cat "$GITHUB_ACTION_PATH/.codspeed-runner-version")
         fi
@@ -192,14 +191,15 @@ runs:
           . /etc/os-release
           DISTRO="$ID-$VERSION_ID"
         else
-          DISTRO="$GH_RUNNER_OS"
+          DISTRO="$RUNNER_OS"
         fi
-        DISTRO=$(printf '%s' "$DISTRO" | tr -d '\n\r')
-        echo "distro=$DISTRO" >> "$GITHUB_OUTPUT"
+        SAFE_DISTRO=$(printf '%s' "$DISTRO" | tr -d '\n\r')
+        echo "distro=$SAFE_DISTRO" >> "$GITHUB_OUTPUT"
 
         # Normalize mode for cache key (commas are not allowed in cache keys)
-        MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr ',' '-' | tr -d '\n\r')
-        echo "mode-cache-key=$MODE_CACHE_KEY" >> "$GITHUB_OUTPUT"
+        MODE_CACHE_KEY=$(printf '%s' "$GHA_INPUT_MODE" | tr ',' '-')
+        SAFE_MODE_CACHE_KEY=$(printf '%s' "$MODE_CACHE_KEY" | tr -d '\n\r')
+        echo "mode-cache-key=$SAFE_MODE_CACHE_KEY" >> "$GITHUB_OUTPUT"
 
     - name: Cache CodSpeed instruments
       if: inputs.cache-instruments == 'true'
@@ -298,78 +298,78 @@ runs:
       env:
         GH_MATRIX: "${{ toJson(matrix) }}"
         GH_STRATEGY: "${{ toJson(strategy) }}"
-        # This is needed to properly handle quotes and multiline commands in the 'run' input properly, rather than inlining the input expression in the script
+        # This is needed to properly handle quotes and multiline commands in the 'run' input properly, rather than doing `RUN_INPUT_RUN=${{ inputs.run }}` in the script
         CODSPEED_INPUT_RUN: ${{ inputs.run }}
-        INPUT_MODE: ${{ inputs.mode }}
-        INPUT_TOKEN: ${{ inputs.token }}
-        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
-        INPUT_UPLOAD_URL: ${{ inputs.upload-url }}
-        INPUT_INSTRUMENTS: ${{ inputs.instruments }}
-        INPUT_MONGO_URI_ENV_NAME: ${{ inputs.mongo-uri-env-name }}
-        INPUT_CACHE_INSTRUMENTS: ${{ inputs.cache-instruments }}
-        INPUT_INSTRUMENTS_CACHE_DIR: ${{ inputs.instruments-cache-dir }}
-        INPUT_ALLOW_EMPTY: ${{ inputs.allow-empty }}
-        INPUT_GO_RUNNER_VERSION: ${{ inputs.go-runner-version }}
-        INPUT_CONFIG: ${{ inputs.config }}
-        INPUT_CYCLE_ESTIMATION: ${{ inputs.cycle-estimation }}
-        INPUT_EXCLUDE_ALLOCATIONS: ${{ inputs.exclude-allocations }}
-        INPUT_SIMULATION_TRACK_SUBPROCESS: ${{ inputs.simulation-track-subprocess }}
-        INPUT_DISABLE_MEMORY_TRACK_PHYSICAL: ${{ inputs.disable-memory-track-physical }}
-        INPUT_DISABLE_MEMORY_CAPTURE_STACK: ${{ inputs.disable-memory-capture-stack }}
+        GHA_INPUT_MODE: ${{ inputs.mode }}
+        GHA_INPUT_TOKEN: ${{ inputs.token }}
+        GHA_INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        GHA_INPUT_UPLOAD_URL: ${{ inputs.upload-url }}
+        GHA_INPUT_INSTRUMENTS: ${{ inputs.instruments }}
+        GHA_INPUT_MONGO_URI_ENV_NAME: ${{ inputs.mongo-uri-env-name }}
+        GHA_INPUT_CACHE_INSTRUMENTS: ${{ inputs.cache-instruments }}
+        GHA_INPUT_INSTRUMENTS_CACHE_DIR: ${{ inputs.instruments-cache-dir }}
+        GHA_INPUT_ALLOW_EMPTY: ${{ inputs.allow-empty }}
+        GHA_INPUT_GO_RUNNER_VERSION: ${{ inputs.go-runner-version }}
+        GHA_INPUT_CONFIG: ${{ inputs.config }}
+        GHA_INPUT_CYCLE_ESTIMATION: ${{ inputs.cycle-estimation }}
+        GHA_INPUT_EXCLUDE_ALLOCATIONS: ${{ inputs.exclude-allocations }}
+        GHA_INPUT_SIMULATION_TRACK_SUBPROCESS: ${{ inputs.simulation-track-subprocess }}
+        GHA_INPUT_DISABLE_MEMORY_TRACK_PHYSICAL: ${{ inputs.disable-memory-track-physical }}
+        GHA_INPUT_DISABLE_MEMORY_CAPTURE_STACK: ${{ inputs.disable-memory-capture-stack }}
       run: |
         # Validate required inputs
         # (custom message for smoother v4 migration)
-        if [ -z "$INPUT_MODE" ]; then
+        if [ -z "$GHA_INPUT_MODE" ]; then
           echo "::error title=Missing required input 'mode'::The 'mode' input is required as of CodSpeed Action v4. Please explicitly set 'mode' to 'simulation' or 'walltime'. Before, this variable was automatically set to instrumentation on every runner except for CodSpeed macro runners where it was set to walltime by default. See https://codspeed.io/docs/instruments for details."
           exit 1
         fi
 
         # Build the runner arguments array
         RUNNER_ARGS=()
-        if [ -n "$INPUT_TOKEN" ]; then
-          RUNNER_ARGS+=(--token "$INPUT_TOKEN")
+        if [ -n "$GHA_INPUT_TOKEN" ]; then
+          RUNNER_ARGS+=(--token "$GHA_INPUT_TOKEN")
         fi
-        if [ -n "$INPUT_WORKING_DIRECTORY" ]; then
-          RUNNER_ARGS+=(--working-directory="$INPUT_WORKING_DIRECTORY")
+        if [ -n "$GHA_INPUT_WORKING_DIRECTORY" ]; then
+          RUNNER_ARGS+=(--working-directory="$GHA_INPUT_WORKING_DIRECTORY")
         fi
-        if [ -n "$INPUT_UPLOAD_URL" ]; then
-          RUNNER_ARGS+=(--upload-url="$INPUT_UPLOAD_URL")
+        if [ -n "$GHA_INPUT_UPLOAD_URL" ]; then
+          RUNNER_ARGS+=(--upload-url="$GHA_INPUT_UPLOAD_URL")
         fi
-        if [ -n "$INPUT_MODE" ]; then
-          RUNNER_ARGS+=(--mode="$INPUT_MODE")
+        if [ -n "$GHA_INPUT_MODE" ]; then
+          RUNNER_ARGS+=(--mode="$GHA_INPUT_MODE")
         fi
-        if [ -n "$INPUT_INSTRUMENTS" ]; then
-          RUNNER_ARGS+=(--instruments="$INPUT_INSTRUMENTS")
+        if [ -n "$GHA_INPUT_INSTRUMENTS" ]; then
+          RUNNER_ARGS+=(--instruments="$GHA_INPUT_INSTRUMENTS")
         fi
-        if [ -n "$INPUT_MONGO_URI_ENV_NAME" ]; then
-          RUNNER_ARGS+=(--mongo-uri-env-name="$INPUT_MONGO_URI_ENV_NAME")
+        if [ -n "$GHA_INPUT_MONGO_URI_ENV_NAME" ]; then
+          RUNNER_ARGS+=(--mongo-uri-env-name="$GHA_INPUT_MONGO_URI_ENV_NAME")
         fi
-        if [ "$INPUT_CACHE_INSTRUMENTS" = "true" ] && [ -n "$INPUT_INSTRUMENTS_CACHE_DIR" ]; then
-          RUNNER_ARGS+=(--setup-cache-dir="$INPUT_INSTRUMENTS_CACHE_DIR")
+        if [ "$GHA_INPUT_CACHE_INSTRUMENTS" = "true" ] && [ -n "$GHA_INPUT_INSTRUMENTS_CACHE_DIR" ]; then
+          RUNNER_ARGS+=(--setup-cache-dir="$GHA_INPUT_INSTRUMENTS_CACHE_DIR")
         fi
-        if [ "$INPUT_ALLOW_EMPTY" = "true" ]; then
+        if [ "$GHA_INPUT_ALLOW_EMPTY" = "true" ]; then
           RUNNER_ARGS+=(--allow-empty)
         fi
-        if [ -n "$INPUT_GO_RUNNER_VERSION" ]; then
-          RUNNER_ARGS+=(--go-runner-version="$INPUT_GO_RUNNER_VERSION")
+        if [ -n "$GHA_INPUT_GO_RUNNER_VERSION" ]; then
+          RUNNER_ARGS+=(--go-runner-version="$GHA_INPUT_GO_RUNNER_VERSION")
         fi
-        if [ -n "$INPUT_CONFIG" ]; then
-          RUNNER_ARGS+=(--config="$INPUT_CONFIG")
+        if [ -n "$GHA_INPUT_CONFIG" ]; then
+          RUNNER_ARGS+=(--config="$GHA_INPUT_CONFIG")
         fi
-        if [ -n "$INPUT_CYCLE_ESTIMATION" ]; then
-          RUNNER_ARGS+=(--cycle-estimation="$INPUT_CYCLE_ESTIMATION")
+        if [ -n "$GHA_INPUT_CYCLE_ESTIMATION" ]; then
+          RUNNER_ARGS+=(--cycle-estimation="$GHA_INPUT_CYCLE_ESTIMATION")
         fi
-        if [ -n "$INPUT_EXCLUDE_ALLOCATIONS" ]; then
-          RUNNER_ARGS+=(--exclude-allocations="$INPUT_EXCLUDE_ALLOCATIONS")
+        if [ -n "$GHA_INPUT_EXCLUDE_ALLOCATIONS" ]; then
+          RUNNER_ARGS+=(--exclude-allocations="$GHA_INPUT_EXCLUDE_ALLOCATIONS")
         fi
-        if [ "$INPUT_SIMULATION_TRACK_SUBPROCESS" = "true" ]; then
+        if [ "$GHA_INPUT_SIMULATION_TRACK_SUBPROCESS" = "true" ]; then
           RUNNER_ARGS+=(--simulation-track-subprocess)
         fi
 
-        if [ "$INPUT_DISABLE_MEMORY_TRACK_PHYSICAL" = "true" ]; then
+        if [ "$GHA_INPUT_DISABLE_MEMORY_TRACK_PHYSICAL" = "true" ]; then
           RUNNER_ARGS+=(--disable-memory-track-physical)
         fi
-        if [ "$INPUT_DISABLE_MEMORY_CAPTURE_STACK" = "true" ]; then
+        if [ "$GHA_INPUT_DISABLE_MEMORY_CAPTURE_STACK" = "true" ]; then
           RUNNER_ARGS+=(--disable-memory-capture-stack)
         fi
 

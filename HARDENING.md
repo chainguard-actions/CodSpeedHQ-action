@@ -4,19 +4,19 @@
 
 > This file was generated automatically by the hardening agent.
 
-**Policy SHA:** `d636be7e43ef829af6e853da6b3c7566db9f72fe`
+**Policy SHA:** `374911c4be584df24e6da57af2d990570ef0f859`
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
 **Harden Agent Version:** `2`
 
-Action **CodSpeedHQ--action/v5.6.3** was hardened automatically. 37 finding(s) were identified and resolved across 1 iteration(s).
+Action **CodSpeedHQ--action/v5.6.3** was hardened automatically. 38 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-(a) The 'Determine runner and kernel version' step puts ${{ }} expressions straight into the shell script: `RUNNER_VERSION="${{ inputs.runner-version }}"`, `DISTRO="${{ runner.os }}"` and `MODE_CACHE_KEY=$(echo "${{ inputs.mode }}" | tr ',' '-')`. (b) It also expands $GITHUB_ACTION_PATH without quotes in `cat $GITHUB_ACTION_PATH/.codspeed-runner-version`.
+Rule (a): the 'Determine runner and kernel version' step puts expressions straight into the run: script. Offending lines: `RUNNER_VERSION="${{ inputs.runner-version }}"`, `DISTRO="${{ runner.os }}"` and `MODE_CACHE_KEY=$(echo "${{ inputs.mode }}" | tr ',' '-')`. Because the values are substituted before the shell parses the script, an input containing " or $(...) can run arbitrary commands. Fix: pass them in through env: and use "$VAR" in the script. Also use $RUNNER_OS instead of runner.os.
 
 Locations:
 
@@ -26,7 +26,7 @@ Locations:
 
 ### script-injection (severity: high)
 
-(a) The 'Install CodSpeed runner' step puts ${{ }} expressions straight into the shell script: `RUNNER_VERSION="${{ steps.versions.outputs.runner-version }}"`, `VERSION_TYPE="${{ steps.versions.outputs.version-type }}"`, `SKIP_HASH_CHECK_WARNING="${{ inputs.skip-hash-check-warning }}"` and `EXPECTED_HASH="${{ steps.installer-hash.outputs.hash }}"`. (b) It also expands $HOME without quotes in `source $HOME/.cargo/env`.
+Rule (a): the 'Install CodSpeed runner' step puts expressions straight into the run: script. Offending lines: `RUNNER_VERSION="${{ steps.versions.outputs.runner-version }}"` (this value comes from inputs.runner-version), `VERSION_TYPE="${{ steps.versions.outputs.version-type }}"`, `SKIP_HASH_CHECK_WARNING="${{ inputs.skip-hash-check-warning }}"` and `EXPECTED_HASH="${{ steps.installer-hash.outputs.hash }}"`.
 
 Locations:
 
@@ -36,7 +36,7 @@ Locations:
 
 ### script-injection (severity: high)
 
-(a) The 'Run the benchmarks' step puts many ${{ inputs.* }} expressions straight into the shell script, for example `if [ -z "${{ inputs.mode }}" ]`, `RUNNER_ARGS+=(--token "${{ inputs.token }}")`, `RUNNER_ARGS+=(--working-directory="${{ inputs.working-directory }}")` and `--upload-url`, `--mode`, `--instruments`, `--mongo-uri-env-name`, `--setup-cache-dir`, `--go-runner-version`, `--config`, `--cycle-estimation` and `--exclude-allocations` built the same way. The same applies to the comparisons on inputs.cache-instruments, inputs.allow-empty, inputs.simulation-track-subprocess and inputs.disable-memory-*. Each of these values should be passed in through env: and quoted.
+Rule (a): the 'Run the benchmarks' step puts many ${{ inputs.* }} expressions straight into the run: script. Examples: `if [ -z "${{ inputs.mode }}" ]`, `RUNNER_ARGS+=(--token "${{ inputs.token }}")`, `RUNNER_ARGS+=(--working-directory="${{ inputs.working-directory }}")`, and the same pattern for upload-url, mode, instruments, mongo-uri-env-name, cache-instruments, instruments-cache-dir, allow-empty, go-runner-version, config, cycle-estimation, exclude-allocations, simulation-track-subprocess, disable-memory-track-physical and disable-memory-capture-stack. Each should go into env: and be referenced as a double-quoted variable.
 
 Locations:
 
@@ -44,16 +44,17 @@ Locations:
 
 ### github-env-injection (severity: high)
 
-The 'Determine runner and kernel version' step writes values derived from inputs to $GITHUB_OUTPUT without the printf '%s' | tr -d '\n\r' sanitization step. `echo "runner-version=$RUNNER_VERSION" >> $GITHUB_OUTPUT` comes from inputs.runner-version. `echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT` comes from inputs.mode. A value containing a newline could inject extra outputs.
+The 'Determine runner and kernel version' step writes values from untrusted inputs to $GITHUB_OUTPUT without first stripping newlines with printf '%s' | tr -d '\n\r'. Offending lines: `echo "runner-version=$RUNNER_VERSION" >> $GITHUB_OUTPUT` (from inputs.runner-version), `echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT` (from inputs.mode) and `echo "distro=$DISTRO" >> $GITHUB_OUTPUT`. A value containing a newline can add arbitrary extra outputs.
 
 Locations:
 
 - `action.yml:160`
+- `action.yml:175`
 - `action.yml:179`
 
 ### unsafe-shell (severity: high)
 
-Remote content is piped straight into bash when 'latest' is used: `curl -fsSL https://codspeed.io/install.sh | bash -s -- --quiet`.
+Remote content is piped straight into a shell with no verification: `curl -fsSL https://codspeed.io/install.sh | bash -s -- --quiet` (used when the version type is 'latest').
 
 Locations:
 
@@ -61,7 +62,7 @@ Locations:
 
 ### unsafe-shell (severity: high)
 
-Remote content is piped straight into bash, with no hash check, for prerelease versions: `curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" | bash -s -- --quiet`.
+Remote content is piped straight into a shell with no verification: `curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" | bash -s -- --quiet` (used for prerelease versions).
 
 Locations:
 
@@ -315,13 +316,118 @@ Locations:
 
 - `action.yml:328`
 
+### prior-fix (severity: high)
+
+Carried forward from this version's previous harden, which fixed it; fix it again unless the code no longer has the problem. The previous harden changed action.yml without recording a finding for it, and this analysis reported nothing there. Re-apply its security changes unless the code no longer needs them. The previous patch:
+```diff
+diff --git a/action.yml b/action.yml
+index 0864e9e..918d4f2 100644
+--- a/action.yml
++++ b/action.yml
+@@ -128,13 +128,34 @@ outputs:
+ runs:
+   using: "composite"
+   steps:
+     - name: Determine runner and kernel version
+       id: versions
+       shell: bash
++      env:
++        INPUT_RUNNER_VERSION: ${{ inputs.runner-version }}
++        INPUT_MODE: ${{ inputs.mode }}
++        GH_RUNNER_OS: ${{ runner.os }}
+       run: |
+-        RUNNER_VERSION="${{ inputs.runner-version }}"
++        RUNNER_VERSION="$INPUT_RUNNER_VERSION"
+         if [ -z "$RUNNER_VERSION" ]; then
+-          RUNNER_VERSION=$(cat $GITHUB_ACTION_PATH/.codspeed-runner-version)
++          RUNNER_VERSION=$(cat "$GITHUB_ACTION_PATH/.codspeed-runner-version")
+         fi
+         # Strip 'v' prefix if present to normalize version format
+         RUNNER_VERSION="${RUNNER_VERSION#v}"
+@@ -157,12 +178,13 @@ runs:
+           VERSION_TYPE="release"
+         fi
+ 
+-        echo "runner-version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
+-        echo "version-type=$VERSION_TYPE" >> $GITHUB_OUTPUT
++        SAFE_RUNNER_VERSION=$(printf '%s' "$RUNNER_VERSION" | tr -d '\n\r')
++        echo "runner-version=$SAFE_RUNNER_VERSION" >> "$GITHUB_OUTPUT"
++        echo "version-type=$VERSION_TYPE" >> "$GITHUB_OUTPUT"
+ 
+         # Get kernel version for cache key
+         KERNEL_VERSION=$(uname -r)
+-        echo "kernel-version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
++        echo "kernel-version=$KERNEL_VERSION" >> "$GITHUB_OUTPUT"
+ 
+         # Get the distribution for the cache key: instrument installations are built against a
+         # specific release, and `runner.os` only says `Linux`
+@@ -170,17 +192,18 @@ runs:
+           . /etc/os-release
+           DISTRO="$ID-$VERSION_ID"
+         else
+-          DISTRO="${{ runner.os }}"
++          DISTRO="$GH_RUNNER_OS"
+         fi
+-        echo "distro=$DISTRO" >> $GITHUB_OUTPUT
++        DISTRO=$(printf '%s' "$DISTRO" | tr -d '\n\r')
++        echo "distro=$DISTRO" >> "$GITHUB_OUTPUT"
+ 
+         # Normalize mode for cache key (commas are not allowed in cache keys)
+-        MODE_CACHE_KEY=$(echo "${{ inputs.mode }}" | tr ',' '-')
+-        echo "mode-cache-key=$MODE_CACHE_KEY" >> $GITHUB_OUTPUT
++        MODE_CACHE_KEY=$(printf '%s' "$INPUT_MODE" | tr ',' '-' | tr -d '\n\r')
++        echo "mode-cache-key=$MODE_CACHE_KEY" >> "$GITHUB_OUTPUT"
+ 
+     - name: Cache CodSpeed instruments
+       if: inputs.cache-instruments == 'true'
+       uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+       with:
+         path: ${{ inputs.instruments-cache-dir }}
+         key: codspeed-instruments-${{ steps.versions.outputs.mode-cache-key }}-${{ steps.versions.outputs.distro }}-${{ runner.arch }}-${{ steps.versions.outputs.kernel-version }}-${{ steps.versions.outputs.runner-version }}
+@@ -189,7 +212,7 @@ runs:
+ 
+     - name: Lookup installer hash
+       id: installer-hash
+       uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+       env:
+         RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
+       with:
+@@ -200,42 +223,48 @@ runs:
+ 
+     - name: Install CodSpeed runner
+       shell: bash
++      env:
++        RUNNER_VERSION: ${{ steps.versions.outputs.runner-version }}
++        VERSION_TYPE: ${{ steps.versions.outputs.version-type }}
++        SKIP_HASH_CHECK_WARNING: ${{ inputs.skip-hash-check-warning }}
++        EXPECTED_HASH: ${{ steps.installer-hash.outputs.hash }}
+       run: |
+-        RUNNER_VERSION="${{ steps.versions.outputs.runner-version }}"
+-        VERSION_TYPE="${{ steps.versions.outputs.version-type }}"
+-
+-        SKIP_HASH_CHECK_WARNING="${{ inputs.skip-hash-check-warning }}"
+-
+         if [ "$VERSION_TYPE" = "latest" ]; then
+           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
+             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
+           fi
+-          curl -fsSL https://codspeed.io/install.sh | bash -s -- --quiet
++          INSTALLER_TMP=$(mktemp)
++          curl -fsSL https://co
+... (truncated)
+```
+
+Locations:
+
+- `action.yml`
+
 ## Iteration Notes
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, github-env-injection, unsafe-shell, static-inline-injection
+**Fixes applied:** script-injection, static-inline-injection, github-env-injection, unsafe-shell, prior-fix
 
 **Notes:**
 
-All changes are in action.yml. Version step: inputs.runner-version, inputs.mode and runner.os now come in through env:. $GITHUB_ACTION_PATH and $GITHUB_OUTPUT are quoted. runner-version, distro and mode-cache-key have newlines removed (printf '%s' | tr -d '\n\r') before they are written to GITHUB_OUTPUT. Install step: the steps.* outputs and inputs.skip-hash-check-warning now come in through env:. $HOME is quoted in 'source "$HOME/.cargo/env"', and the trap now quotes the temp file path. The 'latest' and prerelease installers are downloaded to a mktemp file with 'curl -fsSL -o' and then run with 'bash "$INSTALLER_TMP" --quiet' (the -s and -- from the pipe form are dropped). The release path with its hash check is unchanged. Run step: every inputs.* value now comes in through env: as an INPUT_* variable and is used double-quoted, so the argument list given to codspeed is the same as before. This includes instruments-cache-dir, which is still passed as the literal '~/.cache/codspeed-action' exactly as upstream did. I also reworded a YAML comment so it no longer contains expression syntax. One edit (adding env: to the version step) did not stick the first time even though it reported success, so I re-applied it and confirmed by searching the file. Nothing was run to test these changes.
+action.yml: moved all ${{ }} expressions out of run: scripts into step env: blocks (GHA_INPUT_* vars, RUNNER_VERSION/VERSION_TYPE/SKIP_HASH_CHECK_WARNING/EXPECTED_HASH), replaced runner.os with $RUNNER_OS; sanitized runner-version, distro, and mode-cache-key with tr -d '\n\r' before writing to $GITHUB_OUTPUT and quoted $GITHUB_OUTPUT; replaced both curl | bash -s -- --quiet with download-to-mktemp then 'bash "$file" --quiet' (dropped -s and --); quoted $GITHUB_ACTION_PATH, $HOME/.cargo/env and the trap path. Behavior otherwise unchanged.
 
