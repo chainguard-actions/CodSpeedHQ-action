@@ -155,7 +155,7 @@ runs:
       run: |
         RUNNER_VERSION="$INPUT_RUNNER_VERSION"
         if [ -z "$RUNNER_VERSION" ]; then
-          RUNNER_VERSION=$(cat $GITHUB_ACTION_PATH/.codspeed-runner-version)
+          RUNNER_VERSION=$(cat "$GITHUB_ACTION_PATH/.codspeed-runner-version")
         fi
         # Strip 'v' prefix if present to normalize version format
         RUNNER_VERSION="${RUNNER_VERSION#v}"
@@ -184,7 +184,7 @@ runs:
 
         # Get kernel version for cache key
         KERNEL_VERSION=$(uname -r)
-        echo "kernel-version=$KERNEL_VERSION" >> $GITHUB_OUTPUT
+        echo "kernel-version=$KERNEL_VERSION" >> "$GITHUB_OUTPUT"
 
         # Get the distribution for the cache key: instrument installations are built against a
         # specific release, and `runner.os` only says `Linux`
@@ -250,30 +250,27 @@ runs:
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when installing from a branch."
           fi
-          source $HOME/.cargo/env
+          source "$HOME/.cargo/env"
           cargo install --locked --git https://github.com/CodSpeedHQ/codspeed --branch "$RUNNER_VERSION" codspeed-runner
         elif [ "$VERSION_TYPE" = "rev" ]; then
           # Install from specific commit/rev using cargo
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when installing from a revision."
           fi
-          source $HOME/.cargo/env
+          source "$HOME/.cargo/env"
           cargo install --locked --git https://github.com/CodSpeedHQ/codspeed --rev "$RUNNER_VERSION" codspeed-runner
         else
           # Release version - download to temp file and verify hash
           INSTALLER_URL="https://codspeed.io/v$RUNNER_VERSION/install.sh"
           INSTALLER_TMP=$(mktemp)
-          trap "rm -f $INSTALLER_TMP" EXIT
+          trap 'rm -f "$INSTALLER_TMP"' EXIT
 
           CURL_ERR=$(mktemp)
           if ! HTTP_CODE=$(curl -sSL -o "$INSTALLER_TMP" -w "%{http_code}" "$INSTALLER_URL" 2>"$CURL_ERR"); then
             echo "::error title=Failed to install CodSpeed CLI::Installation of CodSpeed CLI with version $RUNNER_VERSION failed.%0AReason: $(cat "$CURL_ERR")"
-            rm -f "$CURL_ERR"
             exit 1
           fi
-          rm -f "$CURL_ERR"
-
-          if [ "$HTTP_CODE" -ne 200 ]; then
+          if [ "$HTTP_CODE" -ge 400 ]; then
             error_body=$(cat "$INSTALLER_TMP")
             echo "::error title=Failed to install CodSpeed CLI::Installation of CodSpeed CLI with version $RUNNER_VERSION failed.%0AReason: HTTP $HTTP_CODE - ${error_body:-no response body}"
             exit 1
@@ -303,76 +300,76 @@ runs:
         GH_STRATEGY: "${{ toJson(strategy) }}"
         # This is needed to properly handle quotes and multiline commands in the 'run' input properly, rather than doing `RUN_INPUT_RUN=${{ inputs.run }}` in the script
         CODSPEED_INPUT_RUN: ${{ inputs.run }}
-        CODSPEED_INPUT_MODE: ${{ inputs.mode }}
-        CODSPEED_INPUT_TOKEN: ${{ inputs.token }}
-        CODSPEED_INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
-        CODSPEED_INPUT_UPLOAD_URL: ${{ inputs.upload-url }}
-        CODSPEED_INPUT_INSTRUMENTS: ${{ inputs.instruments }}
-        CODSPEED_INPUT_MONGO_URI_ENV_NAME: ${{ inputs.mongo-uri-env-name }}
-        CODSPEED_INPUT_CACHE_INSTRUMENTS: ${{ inputs.cache-instruments }}
-        CODSPEED_INPUT_INSTRUMENTS_CACHE_DIR: ${{ inputs.instruments-cache-dir }}
-        CODSPEED_INPUT_ALLOW_EMPTY: ${{ inputs.allow-empty }}
-        CODSPEED_INPUT_GO_RUNNER_VERSION: ${{ inputs.go-runner-version }}
-        CODSPEED_INPUT_CONFIG: ${{ inputs.config }}
-        CODSPEED_INPUT_CYCLE_ESTIMATION: ${{ inputs.cycle-estimation }}
-        CODSPEED_INPUT_EXCLUDE_ALLOCATIONS: ${{ inputs.exclude-allocations }}
-        CODSPEED_INPUT_SIMULATION_TRACK_SUBPROCESS: ${{ inputs.simulation-track-subprocess }}
-        CODSPEED_INPUT_DISABLE_MEMORY_TRACK_PHYSICAL: ${{ inputs.disable-memory-track-physical }}
-        CODSPEED_INPUT_DISABLE_MEMORY_CAPTURE_STACK: ${{ inputs.disable-memory-capture-stack }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_TOKEN: ${{ inputs.token }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_UPLOAD_URL: ${{ inputs.upload-url }}
+        INPUT_INSTRUMENTS: ${{ inputs.instruments }}
+        INPUT_MONGO_URI_ENV_NAME: ${{ inputs.mongo-uri-env-name }}
+        INPUT_CACHE_INSTRUMENTS: ${{ inputs.cache-instruments }}
+        INPUT_INSTRUMENTS_CACHE_DIR: ${{ inputs.instruments-cache-dir }}
+        INPUT_ALLOW_EMPTY: ${{ inputs.allow-empty }}
+        INPUT_GO_RUNNER_VERSION: ${{ inputs.go-runner-version }}
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_CYCLE_ESTIMATION: ${{ inputs.cycle-estimation }}
+        INPUT_EXCLUDE_ALLOCATIONS: ${{ inputs.exclude-allocations }}
+        INPUT_SIMULATION_TRACK_SUBPROCESS: ${{ inputs.simulation-track-subprocess }}
+        INPUT_DISABLE_MEMORY_TRACK_PHYSICAL: ${{ inputs.disable-memory-track-physical }}
+        INPUT_DISABLE_MEMORY_CAPTURE_STACK: ${{ inputs.disable-memory-capture-stack }}
       run: |
         # Validate required inputs
         # (custom message for smoother v4 migration)
-        if [ -z "$CODSPEED_INPUT_MODE" ]; then
+        if [ -z "$INPUT_MODE" ]; then
           echo "::error title=Missing required input 'mode'::The 'mode' input is required as of CodSpeed Action v4. Please explicitly set 'mode' to 'simulation' or 'walltime'. Before, this variable was automatically set to instrumentation on every runner except for CodSpeed macro runners where it was set to walltime by default. See https://codspeed.io/docs/instruments for details."
           exit 1
         fi
 
         # Build the runner arguments array
         RUNNER_ARGS=()
-        if [ -n "$CODSPEED_INPUT_TOKEN" ]; then
-          RUNNER_ARGS+=(--token "$CODSPEED_INPUT_TOKEN")
+        if [ -n "$INPUT_TOKEN" ]; then
+          RUNNER_ARGS+=(--token "$INPUT_TOKEN")
         fi
-        if [ -n "$CODSPEED_INPUT_WORKING_DIRECTORY" ]; then
-          RUNNER_ARGS+=(--working-directory="$CODSPEED_INPUT_WORKING_DIRECTORY")
+        if [ -n "$INPUT_WORKING_DIRECTORY" ]; then
+          RUNNER_ARGS+=(--working-directory="$INPUT_WORKING_DIRECTORY")
         fi
-        if [ -n "$CODSPEED_INPUT_UPLOAD_URL" ]; then
-          RUNNER_ARGS+=(--upload-url="$CODSPEED_INPUT_UPLOAD_URL")
+        if [ -n "$INPUT_UPLOAD_URL" ]; then
+          RUNNER_ARGS+=(--upload-url="$INPUT_UPLOAD_URL")
         fi
-        if [ -n "$CODSPEED_INPUT_MODE" ]; then
-          RUNNER_ARGS+=(--mode="$CODSPEED_INPUT_MODE")
+        if [ -n "$INPUT_MODE" ]; then
+          RUNNER_ARGS+=(--mode="$INPUT_MODE")
         fi
-        if [ -n "$CODSPEED_INPUT_INSTRUMENTS" ]; then
-          RUNNER_ARGS+=(--instruments="$CODSPEED_INPUT_INSTRUMENTS")
+        if [ -n "$INPUT_INSTRUMENTS" ]; then
+          RUNNER_ARGS+=(--instruments="$INPUT_INSTRUMENTS")
         fi
-        if [ -n "$CODSPEED_INPUT_MONGO_URI_ENV_NAME" ]; then
-          RUNNER_ARGS+=(--mongo-uri-env-name="$CODSPEED_INPUT_MONGO_URI_ENV_NAME")
+        if [ -n "$INPUT_MONGO_URI_ENV_NAME" ]; then
+          RUNNER_ARGS+=(--mongo-uri-env-name="$INPUT_MONGO_URI_ENV_NAME")
         fi
-        if [ "$CODSPEED_INPUT_CACHE_INSTRUMENTS" = "true" ] && [ -n "$CODSPEED_INPUT_INSTRUMENTS_CACHE_DIR" ]; then
-          RUNNER_ARGS+=(--setup-cache-dir="$CODSPEED_INPUT_INSTRUMENTS_CACHE_DIR")
+        if [ "$INPUT_CACHE_INSTRUMENTS" = "true" ] && [ -n "$INPUT_INSTRUMENTS_CACHE_DIR" ]; then
+          RUNNER_ARGS+=(--setup-cache-dir="$INPUT_INSTRUMENTS_CACHE_DIR")
         fi
-        if [ "$CODSPEED_INPUT_ALLOW_EMPTY" = "true" ]; then
+        if [ "$INPUT_ALLOW_EMPTY" = "true" ]; then
           RUNNER_ARGS+=(--allow-empty)
         fi
-        if [ -n "$CODSPEED_INPUT_GO_RUNNER_VERSION" ]; then
-          RUNNER_ARGS+=(--go-runner-version="$CODSPEED_INPUT_GO_RUNNER_VERSION")
+        if [ -n "$INPUT_GO_RUNNER_VERSION" ]; then
+          RUNNER_ARGS+=(--go-runner-version="$INPUT_GO_RUNNER_VERSION")
         fi
-        if [ -n "$CODSPEED_INPUT_CONFIG" ]; then
-          RUNNER_ARGS+=(--config="$CODSPEED_INPUT_CONFIG")
+        if [ -n "$INPUT_CONFIG" ]; then
+          RUNNER_ARGS+=(--config="$INPUT_CONFIG")
         fi
-        if [ -n "$CODSPEED_INPUT_CYCLE_ESTIMATION" ]; then
-          RUNNER_ARGS+=(--cycle-estimation="$CODSPEED_INPUT_CYCLE_ESTIMATION")
+        if [ -n "$INPUT_CYCLE_ESTIMATION" ]; then
+          RUNNER_ARGS+=(--cycle-estimation="$INPUT_CYCLE_ESTIMATION")
         fi
-        if [ -n "$CODSPEED_INPUT_EXCLUDE_ALLOCATIONS" ]; then
-          RUNNER_ARGS+=(--exclude-allocations="$CODSPEED_INPUT_EXCLUDE_ALLOCATIONS")
+        if [ -n "$INPUT_EXCLUDE_ALLOCATIONS" ]; then
+          RUNNER_ARGS+=(--exclude-allocations="$INPUT_EXCLUDE_ALLOCATIONS")
         fi
-        if [ "$CODSPEED_INPUT_SIMULATION_TRACK_SUBPROCESS" = "true" ]; then
+        if [ "$INPUT_SIMULATION_TRACK_SUBPROCESS" = "true" ]; then
           RUNNER_ARGS+=(--simulation-track-subprocess)
         fi
 
-        if [ "$CODSPEED_INPUT_DISABLE_MEMORY_TRACK_PHYSICAL" = "true" ]; then
+        if [ "$INPUT_DISABLE_MEMORY_TRACK_PHYSICAL" = "true" ]; then
           RUNNER_ARGS+=(--disable-memory-track-physical)
         fi
-        if [ "$CODSPEED_INPUT_DISABLE_MEMORY_CAPTURE_STACK" = "true" ]; then
+        if [ "$INPUT_DISABLE_MEMORY_CAPTURE_STACK" = "true" ]; then
           RUNNER_ARGS+=(--disable-memory-capture-stack)
         fi
 
