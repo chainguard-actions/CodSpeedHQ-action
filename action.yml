@@ -239,19 +239,19 @@ runs:
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available when using 'latest' version. Consider pinning a specific version for supply chain security."
           fi
-          INSTALLER_TMP=$(mktemp)
-          trap 'rm -f "$INSTALLER_TMP"' EXIT
-          curl -fsSL https://codspeed.io/install.sh -o "$INSTALLER_TMP"
-          bash "$INSTALLER_TMP" --quiet
+          LATEST_INSTALLER=$(mktemp)
+          curl -fsSL https://codspeed.io/install.sh -o "$LATEST_INSTALLER"
+          bash "$LATEST_INSTALLER" --quiet
+          rm -f "$LATEST_INSTALLER"
         elif [ "$VERSION_TYPE" = "prerelease" ]; then
           # Prereleases are not pinned, so install from the versioned installer without hash verification.
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
             echo "::warning::Hash verification is not available for prerelease version $RUNNER_VERSION."
           fi
-          INSTALLER_TMP=$(mktemp)
-          trap 'rm -f "$INSTALLER_TMP"' EXIT
-          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$INSTALLER_TMP"
-          bash "$INSTALLER_TMP" --quiet
+          PRERELEASE_INSTALLER=$(mktemp)
+          curl -fsSL "https://codspeed.io/v$RUNNER_VERSION/install.sh" -o "$PRERELEASE_INSTALLER"
+          bash "$PRERELEASE_INSTALLER" --quiet
+          rm -f "$PRERELEASE_INSTALLER"
         elif [ "$VERSION_TYPE" = "branch" ]; then
           # Install from specific branch using cargo
           if [ "$SKIP_HASH_CHECK_WARNING" != "true" ]; then
@@ -305,7 +305,7 @@ runs:
       env:
         GH_MATRIX: "${{ toJson(matrix) }}"
         GH_STRATEGY: "${{ toJson(strategy) }}"
-        # This is needed to properly handle quotes and multiline commands in the 'run' input properly, rather than inlining the input in the script
+        # This is needed to properly handle quotes and multiline commands in the 'run' input properly, rather than doing `RUN_INPUT_RUN=${{ inputs.run }}` in the script
         CODSPEED_INPUT_RUN: ${{ inputs.run }}
         GHA_INPUT_MODE: ${{ inputs.mode }}
         GHA_INPUT_TOKEN: ${{ inputs.token }}
