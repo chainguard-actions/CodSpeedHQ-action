@@ -33,6 +33,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v5.6.0 | [`v5.6.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v5.6.0) | [`78102a4`](https://github.com/CodSpeedHQ/action/commit/78102a468f96d8e0ccb92d0ec49425753fc42062) | [`HARDENING.md`](https://github.com/chainguard-actions/CodSpeedHQ-action/blob/v5.6.0/HARDENING.md) |
 | v5.6.1 | [`v5.6.1`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v5.6.1) | [`61efe07`](https://github.com/CodSpeedHQ/action/commit/61efe07e57e55bedeab750c434504de272a56e8c) | [`HARDENING.md`](https://github.com/chainguard-actions/CodSpeedHQ-action/blob/v5.6.1/HARDENING.md) |
 | v5.6.3 | [`v5.6.3`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v5.6.3) | [`af75f77`](https://github.com/CodSpeedHQ/action/commit/af75f77f17a054769abefaa42fe8dc2975469b5f) | [`HARDENING.md`](https://github.com/chainguard-actions/CodSpeedHQ-action/blob/v5.6.3/HARDENING.md) |
+| v5.8.0 | [`v5.8.0`](https://github.com/chainguard-actions/CodSpeedHQ-action/tree/v5.8.0) | [`b1f28b5`](https://github.com/CodSpeedHQ/action/commit/b1f28b5eccf7cb5bfe6a2a89cb3053eb67f1150c) | [`HARDENING.md`](https://github.com/chainguard-actions/CodSpeedHQ-action/blob/v5.8.0/HARDENING.md) |
 
 ## Privacy
 
